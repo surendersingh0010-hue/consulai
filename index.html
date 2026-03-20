@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConsulAI — Context-Aware Consular Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0e0f13;
+  --ink-mid: #16181f;
+  --ink-light: #1e2130;
+  --ink-border: #252836;
+  --saffron: #e8933a;
+  --saffron-light: #f2b06e;
+  --saffron-glow: rgba(232,147,58,0.12);
+  --ash: #c5c9d8;
+  --ash-muted: #6b7190;
+  --white: #f0f0f4;
+  --green: #3ecf8e;
+  --red: #e05252;
+  --blue: #5b9cf6;
+  --card: rgba(22,24,31,0.9);
+  --border: rgba(255,255,255,0.07);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--ink);
+  color: var(--ash);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Animated bg */
+.bg-layer {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(232,147,58,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 90% 100%, rgba(91,156,246,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(22,24,31,0.4) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.noise {
+  position: fixed; inset: 0; z-index: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* ── ONBOARDING ── */
+#onboarding {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--ink);
+  transition: opacity 0.5s, transform 0.5s;
+}
+
+#onboarding.exit {
+  opacity: 0;
+  transform: scale(0.97);
+  pointer-events: none;
+}
+
+.onboard-card {
+  width: 480px;
+  background: var(--ink-mid);
+  border: 1px solid var(--ink-border);
+  border-radius: 20px;
+  padding: 40px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.6);
+}
+
+.onboard-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--saffron), transparent);
+}
+
+.ob-logo {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 32px;
+}
+
+.ob-logo-mark {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+.ob-logo-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 24px; font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.3px;
+}
+
+.ob-logo-text span { color: var(--saffron); }
+
+.ob-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px; font-weight: 600;
+  color: var(--white);
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.ob-subtitle {
+  font-size: 14px;
+  color: var(--ash-muted);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+.ob-field { margin-bottom: 20px; }
+
+.ob-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--saffron);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.flag-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.flag-btn {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 5px;
+  padding: 10px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  cursor: pointer;
+  transition: all 0.18s;
+  font-size: 11px;
+  color: var(--ash-muted);
+  text-align: center;
+}
+
+.flag-btn .f { font-size: 22px; }
+.flag-btn:hover { border-color: rgba(232,147,58,0.4); background: var(--saffron-glow); color: var(--ash); }
+.flag-btn.selected { border-color: var(--saffron); background: rgba(232,147,58,0.15); color: var(--saffron-light); }
+
+.ob-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 24px 0;
+}
+
+.ob-btn {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  border: none;
+  border-radius: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px; font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.ob-btn:hover { opacity: 0.9; }
+.ob-btn:active { transform: scale(0.98); }
+.ob-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ob-state-select {
+  width: 100%;
+  background: rgba(14,15,19,0.8);
+  border: 1px solid var(--ink-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--ash);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.ob-state-select:focus { border-color: rgba(232,147,58,0.45); }
+.ob-state-select option, .ob-state-select optgroup { background: #16181f; color: var(--ash); }
+
+/* ── MAIN APP ── */
+#app {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.5s 0.2s;
+}
+#app.visible { opacity: 1; pointer-events: all; }
+
+/* Header */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(14,15,19,0.95);
+  backdrop-filter: blur(16px);
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+.h-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px; font-weight: 700;
+  color: var(--white);
+}
+
+.h-logo-mark {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+.h-logo span { color: var(--saffron); }
+
+.context-pill {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  background: rgba(232,147,58,0.1);
+  border: 1px solid rgba(232,147,58,0.25);
+  border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  color: var(--saffron-light);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.context-pill:hover { background: rgba(232,147,58,0.18); }
+.context-pill .arrow { font-size: 10px; color: var(--ash-muted); }
+
+.h-right { display: flex; align-items: center; gap: 10px; }
+
+.sos-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 14px;
+  background: rgba(224,82,82,0.12);
+  border: 1px solid rgba(224,82,82,0.35);
+  border-radius: 8px;
+  color: var(--red);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 0.3px;
+}
+.sos-btn:hover { background: rgba(224,82,82,0.22); }
+.sos-pulse { width: 7px; height: 7px; background: var(--red); border-radius: 50%; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.4)} }
+
+/* Body layout */
+.app-body {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: rgba(14,15,19,0.6);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar::-webkit-scrollbar { width: 3px; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+.sb-section {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--saffron);
+  margin-bottom: 12px;
+}
+
+/* User identity card */
+.identity-card {
+  background: rgba(232,147,58,0.07);
+  border: 1px solid rgba(232,147,58,0.2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px;
+}
+
+.id-flags { display: flex; align-items: center; gap: 0; }
+.id-flag1 { font-size: 22px; }
+.id-arrow { font-size: 12px; color: var(--ash-muted); margin: 0 4px; }
+.id-flag2 { font-size: 22px; }
+
+.id-text { flex: 1; }
+.id-top { font-size: 13px; font-weight: 600; color: var(--white); }
+.id-bottom { font-size: 11px; color: var(--ash-muted); margin-top: 1px; }
+
+/* Service list */
+.svc-list { display: flex; flex-direction: column; gap: 4px; }
+
+.svc-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s;
+  font-size: 13px;
+}
+.svc-item:hover { background: rgba(255,255,255,0.04); }
+.svc-item.active {
+  background: rgba(232,147,58,0.1);
+  border-color: rgba(232,147,58,0.25);
+  color: var(--saffron-light);
+}
+
+.svc-ico {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+}
+.svc-item.active .svc-ico { background: rgba(232,147,58,0.18); }
+
+/* Context-specific info box in sidebar */
+.ctx-info-box {
+  background: rgba(14,15,19,0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.ctx-row {
+  display: flex; justify-content: space-between;
+  font-size: 11px; margin-bottom: 7px; align-items: flex-start;
+}
+.ctx-row:last-child { margin-bottom: 0; }
+.ctx-key { color: var(--ash-muted); }
+.ctx-val { color: var(--white); font-weight: 500; text-align: right; max-width: 55%; font-size: 11px; }
+.ctx-val.good { color: var(--green); }
+.ctx-val.warn { color: var(--saffron); }
+
+/* Main chat */
+.chat-area {
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+.context-bar {
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(14,15,19,0.5);
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+
+.ctx-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 11px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  font-size: 11px; color: var(--ash-muted);
+}
+
+.ctx-chip.highlight {
+  background: rgba(232,147,58,0.1);
+  border-color: rgba(232,147,58,0.3);
+  color: var(--saffron-light);
+}
+
+.chat-msgs {
+  flex: 1; overflow-y: auto;
+  padding: 24px 28px;
+  display: flex; flex-direction: column; gap: 18px;
+  scroll-behavior: smooth;
+}
+.chat-msgs::-webkit-scrollbar { width: 3px; }
+.chat-msgs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Messages */
+.msg { display: flex; gap: 10px; animation: fadeUp 0.3s ease; max-width: 820px; }
+.msg.user { flex-direction: row-reverse; align-self: flex-end; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+.av {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.av.agent { background: linear-gradient(135deg, #1e2130, var(--saffron)); border: 1px solid rgba(232,147,58,0.3); }
+.av.user { background: rgba(255,255,255,0.08); border: 1px solid var(--border); font-size: 12px; }
+
+.bub {
+  padding: 13px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.7;
+  max-width: 580px;
+}
+.bub.agent {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 3px 10px 10px 10px;
+}
+.bub.user {
+  background: rgba(232,147,58,0.13);
+  border: 1px solid rgba(232,147,58,0.25);
+  border-radius: 10px 3px 10px 10px;
+  color: var(--white);
+}
+
+.bub strong { color: var(--saffron-light); }
+.bub a { color: var(--blue); text-decoration: none; }
+.bub a:hover { text-decoration: underline; }
+
+/* Quick replies */
+.qr-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.qr {
+  padding: 6px 13px; border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  font-size: 12px; cursor: pointer; color: var(--ash-muted);
+  transition: all 0.18s;
+}
+.qr:hover { border-color: rgba(232,147,58,0.4); color: var(--saffron-light); background: var(--saffron-glow); }
+
+/* AI-generated follow-up suggestion buttons */
+.sugg-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.sugg-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--ash-muted); width: 100%; margin-bottom: 2px; }
+.sugg-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(232,147,58,0.3);
+  background: rgba(232,147,58,0.06);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; color: var(--saffron-light);
+  transition: all 0.18s;
+}
+.sugg-btn::before { content: '↗'; font-size: 11px; opacity: 0.7; }
+.sugg-btn:hover { border-color: var(--saffron); background: rgba(232,147,58,0.14); color: var(--white); }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.info-cell {
+  background: rgba(14,15,19,0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.ic-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--saffron); margin-bottom: 3px; }
+.ic-val { font-size: 12px; font-weight: 500; color: var(--white); }
+
+/* Alert banners */
+.alert { display: flex; gap: 9px; padding: 10px 13px; border-radius: 8px; margin-top: 10px; font-size: 13px; line-height: 1.5; }
+.alert.warn { background: rgba(232,147,58,0.09); border: 1px solid rgba(232,147,58,0.25); color: var(--saffron-light); }
+.alert.info { background: rgba(91,156,246,0.09); border: 1px solid rgba(91,156,246,0.25); color: #8ab8ff; }
+.alert.ok { background: rgba(62,207,142,0.09); border: 1px solid rgba(62,207,142,0.25); color: var(--green); }
+.alert.emer { background: rgba(224,82,82,0.09); border: 1px solid rgba(224,82,82,0.3); color: var(--red); }
+
+/* Form card */
+.form-card {
+  background: rgba(22,24,31,0.7);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  margin-top: 10px;
+  animation: fadeUp 0.35s ease;
+}
+.fc-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px; font-weight: 600;
+  color: var(--saffron-light);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.fg { display: flex; flex-direction: column; gap: 4px; }
+.fg.full { grid-column: 1/-1; }
+.fl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--ash-muted); }
+.fi, .fs {
+  background: rgba(14,15,19,0.8);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 6px;
+  padding: 8px 11px;
+  color: var(--ash);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+.fi:focus, .fs:focus { border-color: rgba(232,147,58,0.45); }
+.fs option { background: var(--ink-mid); }
+.fa { display: flex; gap: 8px; margin-top: 14px; }
+.btn-p {
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  color: var(--ink); border: none;
+  padding: 9px 18px; border-radius: 7px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.btn-p:hover { opacity: 0.88; }
+.btn-s {
+  background: transparent; color: var(--ash-muted);
+  border: 1px solid var(--border);
+  padding: 9px 16px; border-radius: 7px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; cursor: pointer;
+  transition: all 0.18s;
+}
+.btn-s:hover { border-color: rgba(255,255,255,0.2); color: var(--ash); }
+
+/* Typing */
+.typing-bub {
+  display: flex; gap: 4px; align-items: center;
+  padding: 13px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 3px 10px 10px 10px;
+  width: fit-content;
+}
+.typing-bub span {
+  width: 5px; height: 5px;
+  background: var(--saffron);
+  border-radius: 50%;
+  animation: tdot 1.2s infinite; opacity: 0.5;
+}
+.typing-bub span:nth-child(2) { animation-delay: 0.2s; }
+.typing-bub span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes tdot { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px);opacity:1} }
+
+/* Input */
+.chat-input-area {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  background: rgba(14,15,19,0.9);
+  backdrop-filter: blur(12px);
+  flex-shrink: 0;
+}
+.input-wrap { display: flex; gap: 8px; align-items: flex-end; }
+.chat-in {
+  flex: 1;
+  background: rgba(22,24,31,0.8);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 15px;
+  color: var(--white);
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px; resize: none; outline: none;
+  transition: border-color 0.2s;
+  min-height: 44px; max-height: 120px;
+}
+.chat-in:focus { border-color: rgba(232,147,58,0.35); }
+.chat-in::placeholder { color: var(--ash-muted); }
+.send {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  border: none; border-radius: 10px;
+  cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.2s, transform 0.1s; flex-shrink: 0; color: var(--ink);
+}
+.send:hover { opacity: 0.88; }
+.send:active { transform: scale(0.95); }
+
+/* Checklist */
+.ck-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.ck-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.5; }
+.ck-list li::before { content:'✓'; color: var(--green); font-weight: 700; font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+.ck-list li.warn::before { content:'⚠'; color: var(--saffron); }
+.ck-list li.req::before { content:'\2715'; color: var(--red); }
+
+/* Step-by-step layout */
+.steps { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.step {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 10px 12px;
+  background: rgba(14,15,19,0.5);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--saffron);
+  border-radius: 0 8px 8px 0;
+}
+.step-num {
+  min-width: 22px; height: 22px;
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  color: var(--ink);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.step-body { font-size: 13px; line-height: 1.6; }
+
+/* Emergency Modal */
+.modal-ov {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.2s;
+}
+.modal-ov.hidden { display: none; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.modal {
+  background: var(--ink-mid);
+  border: 1px solid rgba(224,82,82,0.3);
+  border-radius: 16px; padding: 28px;
+  max-width: 460px; width: 90%;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.modal-h { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.modal-ico {
+  width: 42px; height: 42px;
+  background: rgba(224,82,82,0.15);
+  border-radius: 50%; border: 2px solid rgba(224,82,82,0.35);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.modal-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--red); }
+.modal-sub { font-size: 11px; color: var(--ash-muted); margin-top: 2px; }
+.ec-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.ec {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px;
+  background: rgba(14,15,19,0.6);
+  border: 1px solid var(--border); border-radius: 9px;
+}
+.ec-flag { font-size: 20px; }
+.ec-info { flex: 1; }
+.ec-country { font-size: 12px; font-weight: 600; color: var(--white); }
+.ec-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--saffron); margin-top: 2px; }
+.ec-btn {
+  background: rgba(224,82,82,0.15); border: 1px solid rgba(224,82,82,0.35);
+  color: var(--red); padding: 5px 11px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.ec-btn:hover { background: rgba(224,82,82,0.28); }
+.modal-close {
+  width: 100%; padding: 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--ash-muted);
+  font-family: 'Outfit', sans-serif; font-size: 13px;
+  cursor: pointer; transition: all 0.2s;
+}
+.modal-close:hover { border-color: rgba(255,255,255,0.2); color: var(--ash); }
+
+/* Consulate info card extras */
+.consulate-card { margin-top: 12px; }
+.appt-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 16px;
+  background: linear-gradient(135deg, var(--saffron), var(--saffron-light));
+  color: var(--ink); border: none; border-radius: 8px;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; text-decoration: none; transition: opacity 0.2s;
+  margin-bottom: 12px;
+}
+.appt-btn:hover { opacity: 0.88; }
+.appt-btn svg { width:14px; height:14px; flex-shrink:0; }
+
+.hours-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; }
+.hours-table tr { border-bottom: 1px solid var(--border); }
+.hours-table tr:last-child { border-bottom: none; }
+.hours-table td { padding: 6px 8px; }
+.hours-table td:first-child { color: var(--ash-muted); width: 40%; }
+.hours-table td:last-child { color: var(--white); font-weight: 500; }
+.hours-table tr.closed td { color: var(--red); opacity: 0.7; }
+
+.holiday-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.holiday-pill {
+  padding: 3px 9px; border-radius: 12px;
+  background: rgba(232,147,58,0.08); border: 1px solid rgba(232,147,58,0.2);
+  font-size: 11px; color: var(--ash-muted);
+}
+.holiday-pill strong { color: var(--saffron-light); font-weight: 600; }
+
+.section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--saffron);
+  margin: 14px 0 6px;
+}
+
+/* Persistent follow-up topic buttons */
+.followup-bank {
+  display: flex; flex-wrap: wrap; gap: 7px;
+  padding: 12px 14px;
+  background: rgba(14,15,19,0.4);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 10px;
+}
+.followup-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--ash-muted); width: 100%; margin-bottom: 4px;
+}
+.followup-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.03);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  color: var(--ash); transition: all 0.18s;
+}
+.followup-btn:hover {
+  border-color: rgba(232,147,58,0.4);
+  background: rgba(232,147,58,0.08);
+  color: var(--saffron-light);
+}
+.followup-btn .f-icon { font-size: 13px; }
+
+/* Emergency triage grid */
+.emer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.emer-cat {
+  padding: 12px 10px;
+  background: rgba(14,15,19,0.7);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+.emer-cat:hover { border-color: rgba(224,82,82,0.45); background: rgba(224,82,82,0.08); }
+.emer-cat.active { border-color: var(--red); background: rgba(224,82,82,0.12); }
+.emer-cat-ico { font-size: 22px; margin-bottom: 5px; }
+.emer-cat-label { font-size: 12px; font-weight: 600; color: var(--white); margin-bottom: 3px; }
+.emer-cat-sub { font-size: 10px; color: var(--ash-muted); line-height: 1.4; }
+
+/* Emergency detail steps */
+.emer-steps { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.emer-step {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 12px;
+  background: rgba(14,15,19,0.6);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--red);
+  border-radius: 0 8px 8px 0;
+}
+.emer-step-num {
+  min-width: 20px; height: 20px;
+  background: rgba(224,82,82,0.2);
+  border: 1px solid rgba(224,82,82,0.4);
+  color: var(--red);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+.emer-step-body { font-size: 12px; line-height: 1.6; color: var(--ash); }
+.emer-step-body strong { color: var(--white); }
+.emer-hotline {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(14,15,19,0.5);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+.emer-hotline-name { font-size: 12px; font-weight: 600; color: var(--white); }
+.emer-hotline-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--saffron); }
+.emer-call-btn {
+  background: rgba(224,82,82,0.15); border: 1px solid rgba(224,82,82,0.35);
+  color: var(--red); padding: 4px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  white-space: nowrap;
+}
+.emer-call-btn:hover { background: rgba(224,82,82,0.28); }
+
+.appt-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:linear-gradient(135deg,var(--saffron),var(--saffron-light));color:var(--ink);border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;transition:opacity .2s;margin-bottom:12px}
+.appt-btn:hover{opacity:.88}
+.section-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--saffron);margin:14px 0 6px}
+.hours-block{margin-top:8px}
+.hours-day-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(14,15,19,.5);border:1px solid var(--border);border-radius:8px 8px 0 0;border-bottom:none}
+.hours-day-label{font-size:12px;font-weight:600;color:var(--ash-muted)}
+.hours-day-time{font-size:13px;font-weight:700;color:var(--white);font-family:'JetBrains Mono',monospace}
+.hours-slots{border:1px solid var(--border);border-radius:0 0 8px 8px;overflow:hidden;margin-bottom:6px}
+.hours-slot{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.hours-slot:last-child{border-bottom:none}
+.hours-slot-label{color:var(--ash-muted)}
+.hours-slot-time{font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--saffron-light)}
+.hours-weekend{display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:rgba(224,82,82,.06);border:1px solid rgba(224,82,82,.15);border-radius:8px;font-size:11px}
+.hours-weekend-label{color:var(--ash-muted)}
+.hours-weekend-val{color:var(--red);font-weight:600}
+.holiday-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.holiday-pill{padding:3px 9px;border-radius:12px;background:rgba(232,147,58,.08);border:1px solid rgba(232,147,58,.2);font-size:11px;color:var(--ash-muted)}
+.holiday-pill strong{color:var(--saffron-light);font-weight:600}
+.sugg-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+.sugg-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ash-muted);width:100%;margin-bottom:2px}
+.sugg-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid rgba(232,147,58,.3);background:rgba(232,147,58,.06);font-size:12px;font-weight:500;cursor:pointer;color:var(--saffron-light);transition:all .18s;font-family:'Outfit',sans-serif}
+.sugg-btn:hover{border-color:var(--saffron);background:rgba(232,147,58,.14);color:var(--white)}
+.followup-bank{display:flex;flex-wrap:wrap;gap:7px;padding:12px 14px;background:rgba(14,15,19,.4);border:1px solid var(--border);border-radius:10px;margin:0 24px 12px}
+.followup-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ash-muted);width:100%;margin-bottom:4px}
+.followup-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.03);font-size:12px;font-weight:500;cursor:pointer;color:var(--ash);transition:all .18s;font-family:'Outfit',sans-serif}
+.followup-btn:hover{border-color:rgba(232,147,58,.4);background:rgba(232,147,58,.08);color:var(--saffron-light)}
+.tracker-item{padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:7px;background:rgba(14,15,19,.5);cursor:pointer;transition:border-color .18s}
+.tracker-item:hover{border-color:rgba(232,147,58,.4)}
+.tracker-ref{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--saffron);font-weight:600;margin-bottom:3px}
+.tracker-meta{font-size:11px;color:var(--ash-muted)}
+.tracker-status{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;margin-top:5px}
+.tracker-status.submitted{background:rgba(91,156,246,.12);color:#8ab8ff;border:1px solid rgba(91,156,246,.25)}
+.tracker-status.processing{background:rgba(232,147,58,.12);color:var(--saffron-light);border:1px solid rgba(232,147,58,.25)}
+.tracker-status.ready{background:rgba(62,207,142,.12);color:var(--green);border:1px solid rgba(62,207,142,.25)}
+.tracker-status.collected{background:rgba(255,255,255,.06);color:var(--ash-muted);border:1px solid var(--border)}
+.tracker-empty{font-size:12px;color:var(--ash-muted);text-align:center;padding:16px 0}
+.timeline{display:flex;flex-direction:column}
+.tl-step{display:flex;gap:12px;position:relative}
+.tl-step:not(:last-child)::after{content:'';position:absolute;left:10px;top:28px;width:2px;height:calc(100% - 4px);background:var(--border)}
+.tl-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-top:2px;border:2px solid var(--border);background:var(--ink-mid);position:relative;z-index:1}
+.tl-dot.done{background:var(--green);border-color:var(--green);color:var(--ink)}
+.tl-dot.active{background:var(--saffron);border-color:var(--saffron);color:var(--ink);animation:pulse 1.5s infinite}
+.tl-dot.pending{background:var(--ink-mid);border-color:var(--border);color:var(--ash-muted)}
+.tl-body{padding-bottom:16px}
+.tl-title{font-size:13px;font-weight:600;color:var(--white)}
+.tl-title.pending{color:var(--ash-muted)}
+.tl-desc{font-size:11px;color:var(--ash-muted);margin-top:2px;line-height:1.5}
+.tl-date{font-size:10px;color:var(--saffron);font-family:'JetBrains Mono',monospace;margin-top:3px}
+@keyframes sos-glow { 0%,100%{box-shadow:0 0 0 0 rgba(224,82,82,0)} 50%{box-shadow:0 0 10px 3px rgba(224,82,82,0.4)} }
+.sos-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.sos-scenario{padding:12px 10px;background:rgba(14,15,19,0.7);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:all 0.18s;text-align:center}
+.sos-scenario:hover{border-color:rgba(224,82,82,0.5);background:rgba(224,82,82,0.08)}
+.sos-scenario.active{border-color:var(--red);background:rgba(224,82,82,0.12)}
+.sos-scenario-ico{font-size:24px;margin-bottom:5px}
+.sos-scenario-label{font-size:12px;font-weight:600;color:var(--white);margin-bottom:2px}
+.sos-scenario-sub{font-size:10px;color:var(--ash-muted);line-height:1.4}
+.sos-detail-step{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;background:rgba(14,15,19,0.6);border:1px solid var(--border);border-left:2px solid var(--red);border-radius:0 8px 8px 0;margin-bottom:6px}
+.sos-step-num{min-width:20px;height:20px;background:rgba(224,82,82,0.2);border:1px solid rgba(224,82,82,0.4);color:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.sos-step-body{font-size:12px;line-height:1.6;color:var(--ash)}
+.sos-step-body strong{color:var(--white)}
+.sos-contact{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(14,15,19,0.5);border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.sos-contact-name{font-size:12px;font-weight:600;color:var(--white)}
+.sos-contact-num{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--saffron)}
+.sos-call{background:rgba(224,82,82,0.15);border:1px solid rgba(224,82,82,0.35);color:var(--red);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer}
+.sos-call:hover{background:rgba(224,82,82,0.28)}
+
+/* ── Sidebar Tabs ── */
+.sb-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,11,15,0.6);
+  flex-shrink: 0;
+}
+.sb-tab {
+  flex: 1;
+  padding: 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  color: var(--ash-muted);
+  border-bottom: 2px solid transparent;
+  transition: all 0.18s;
+  letter-spacing: 0.3px;
+}
+.sb-tab:hover { color: var(--ash); }
+.sb-tab.active {
+  color: var(--saffron-light);
+  border-bottom-color: var(--saffron);
+  background: rgba(232,147,58,0.06);
+}
+.sb-panel { display: none; flex-direction: column; overflow-y: auto; flex: 1; }
+.sb-panel.active { display: flex; }
+
+/* Sub-service items (smaller, indented) */
+.svc-sub {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 7px 10px 7px 20px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.16s;
+  font-size: 12px;
+  color: var(--ash-muted);
+  line-height: 1.4;
+}
+.svc-sub:hover { background: rgba(255,255,255,0.03); color: var(--ash); }
+.svc-sub.active {
+  background: rgba(232,147,58,0.08);
+  border-color: rgba(232,147,58,0.2);
+  color: var(--saffron-light);
+}
+.svc-sub-ico { font-size: 12px; margin-top: 1px; flex-shrink: 0; }
+
+/* Section divider inside panel */
+.svc-group-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--saffron);
+  padding: 10px 10px 4px;
+  opacity: 0.8;
+}
+
+.sb-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(10,11,15,0.6)}
+.sb-tab{flex:1;padding:9px 4px;font-size:9px;font-weight:700;text-align:center;cursor:pointer;color:var(--ash-muted);border-bottom:2px solid transparent;transition:all 0.18s;letter-spacing:0.5px;text-transform:uppercase}
+.sb-tab:hover{color:var(--ash)}
+.sb-tab.active{color:var(--saffron-light);border-bottom-color:var(--saffron);background:rgba(232,147,58,0.06)}
+.sb-panel{display:none;overflow-y:auto;flex:1;min-height:0}
+.sb-panel.active{display:block}
+.svc-group-label{padding:10px 16px 4px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--saffron);opacity:0.8}
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="noise"></div>
+
+<!-- ══ ONBOARDING ══ -->
+<div id="onboarding">
+  <div class="onboard-card">
+    <div class="ob-logo">
+      <div class="ob-logo-mark">🌐</div>
+      <div class="ob-logo-text">Consul<span>AI</span></div>
+    </div>
+
+    <div class="ob-title">Your personal consular guide</div>
+    <div class="ob-subtitle">Tell us your nationality and where you currently live — we'll tailor all advice, procedures, and forms to your exact situation.</div>
+
+    <div class="ob-field">
+      <label class="ob-label">I am a citizen of</label>
+      <div class="flag-grid" id="nationalityGrid">
+        <div class="flag-btn selected" data-code="IN" onclick="selectNationality(this)"><span class="f">🇮🇳</span>India</div>
+        <div class="flag-btn" data-code="US" onclick="selectNationality(this)"><span class="f">🇺🇸</span>USA</div>
+        <div class="flag-btn" data-code="GB" onclick="selectNationality(this)"><span class="f">🇬🇧</span>UK</div>
+        <div class="flag-btn" data-code="DE" onclick="selectNationality(this)"><span class="f">🇩🇪</span>Germany</div>
+        <div class="flag-btn" data-code="AE" onclick="selectNationality(this)"><span class="f">🇦🇪</span>UAE</div>
+      </div>
+    </div>
+
+    <div class="ob-divider"></div>
+
+    <div class="ob-field">
+      <label class="ob-label">I currently live in</label>
+      <div class="flag-grid" id="residenceGrid">
+        <div class="flag-btn" data-code="IN" onclick="selectResidence(this)"><span class="f">🇮🇳</span>India</div>
+        <div class="flag-btn" data-code="US" onclick="selectResidence(this)"><span class="f">🇺🇸</span>USA</div>
+        <div class="flag-btn" data-code="GB" onclick="selectResidence(this)"><span class="f">🇬🇧</span>UK</div>
+        <div class="flag-btn selected" data-code="DE" onclick="selectResidence(this)"><span class="f">🇩🇪</span>Germany</div>
+        <div class="flag-btn" data-code="AE" onclick="selectResidence(this)"><span class="f">🇦🇪</span>UAE</div>
+      </div>
+    </div>
+
+    <div id="statePickerSection" style="display:none; margin-bottom:20px">
+      <div class="ob-divider"></div>
+      <label class="ob-label">Your state in Germany</label>
+      <select id="germanStateSelect" class="ob-state-select" onchange="onStateChange(this.value)">
+        <option value="">-- Select your German state --</option>
+        <optgroup label="Berlin Office">
+          <option value="Berlin">Berlin</option>
+          <option value="Brandenburg">Brandenburg</option>
+          <option value="Mecklenburg-Vorpommern">Mecklenburg-Vorpommern</option>
+          <option value="Sachsen">Sachsen (Saxony)</option>
+          <option value="Sachsen-Anhalt">Sachsen-Anhalt</option>
+          <option value="Thüringen">Thüringen (Thuringia)</option>
+        </optgroup>
+        <optgroup label="Frankfurt Office">
+          <option value="Hessen">Hessen</option>
+          <option value="Nordrhein-Westfalen">Nordrhein-Westfalen (NRW)</option>
+          <option value="Rheinland-Pfalz">Rheinland-Pfalz</option>
+          <option value="Saarland">Saarland</option>
+        </optgroup>
+        <optgroup label="Hamburg Office">
+          <option value="Hamburg">Hamburg</option>
+          <option value="Bremen">Bremen</option>
+          <option value="Schleswig-Holstein">Schleswig-Holstein</option>
+          <option value="Niedersachsen">Niedersachsen (Lower Saxony)</option>
+        </optgroup>
+        <optgroup label="Munich Office">
+          <option value="Bayern">Bayern (Bavaria)</option>
+          <option value="Baden-Württemberg">Baden-Württemberg</option>
+        </optgroup>
+      </select>
+      <div id="consulatePreview" style="margin-top:10px; display:none">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:rgba(232,147,58,0.08);border:1px solid rgba(232,147,58,0.25);border-radius:8px">
+          <span style="font-size:18px">🏛️</span>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--saffron-light)" id="consulatePreviewName"></div>
+            <div style="font-size:11px;color:var(--ash-muted)" id="consulatePreviewAddr"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="ob-btn" id="startBtn" onclick="startApp()">
+      Start My Consular Journey →
+    </button>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="app">
+  <header>
+    <div class="h-logo">
+      <div class="h-logo-mark">🌐</div>
+      Consul<span>AI</span>
+    </div>
+    <div class="context-pill" onclick="goBack()" title="Change profile">
+      <span id="headerCtx">🇮🇳 Indian in 🇩🇪 Germany</span>
+      <span class="arrow">✎</span>
+    </div>
+    <div class="h-right">
+      <button class="sos-btn" onclick="openSOS()"><div class="sos-pulse"></div> Emergency</button>
+      <button class="sos-btn" id="sosBtn2" onclick="openSOSModal()" style="background:rgba(224,82,82,0.25);border-color:rgba(224,82,82,0.7);font-weight:700;letter-spacing:0.5px;animation:sos-glow 2s infinite">⚠ SOS</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sb-section" style="flex-shrink:0">
+        <div class="sb-label">Your Profile</div>
+        <div class="identity-card">
+          <div class="id-flags">
+            <span class="id-flag1" id="sb-flag1">&#127988;</span>
+            <span class="id-arrow">&#8594;</span>
+            <span class="id-flag2" id="sb-flag2">&#127988;</span>
+          </div>
+          <div class="id-text">
+            <div class="id-top" id="sb-id-top">Indian National</div>
+            <div class="id-bottom" id="sb-id-bottom">Residing in Germany</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-tabs">
+        <div class="sb-tab active" onclick="switchSbTab('consular')">Consular</div>
+        <div class="sb-tab" onclick="switchSbTab('certificates')">Certificates</div>
+        <div class="sb-tab" onclick="switchSbTab('community')">Community</div>
+      </div>
+
+      <div class="sb-panel active" id="sbTab-consular">
+        <div class="svc-group-label">Travel &amp; Entry</div>
+        <div class="svc-list">
+          <div class="svc-item active" onclick="setService(this,'Visa Services','&#128706;')"><div class="svc-ico">&#128706;</div> Visa Services</div>
+          <div class="svc-item" onclick="setService(this,'Travel Advisories','&#128506;')"><div class="svc-ico">&#128506;</div> Travel Advisories</div>
+        </div>
+        <div class="svc-group-label">Passport</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'Passport Renewal','&#128216;')"><div class="svc-ico">&#128216;</div> Renewal</div>
+          <div class="svc-item" onclick="setService(this,'Lost or Damaged Passport','&#128683;')"><div class="svc-ico">&#128683;</div> Lost / Damaged</div>
+          <div class="svc-item" onclick="setService(this,'Passport Personal Details Change','&#9998;')"><div class="svc-ico">&#9998;</div> Personal Details Change</div>
+          <div class="svc-item" onclick="setService(this,'Newborn Passport &amp; Birth Registration','&#128118;')"><div class="svc-ico">&#128118;</div> Newborn Passport</div>
+          <div class="svc-item" onclick="setService(this,'Emergency Certificate','&#128680;')"><div class="svc-ico">&#128680;</div> Emergency Certificate</div>
+          <div class="svc-item" onclick="setService(this,'Passport for Asylum / Duldung Holders','&#128274;')"><div class="svc-ico">&#128274;</div> Asylum / Duldung</div>
+        </div>
+        <div class="svc-group-label">OCI &amp; Citizenship</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'OCI Fresh Application','&#127963;')"><div class="svc-ico">&#127963;</div> OCI Fresh (Adult / Minor)</div>
+          <div class="svc-item" onclick="setService(this,'OCI Spouse Application','&#128145;')"><div class="svc-ico">&#128145;</div> OCI Spouse</div>
+          <div class="svc-item" onclick="setService(this,'OCI Renewal or Loss','&#128260;')"><div class="svc-ico">&#128260;</div> OCI Renewal / Loss</div>
+          <div class="svc-item" onclick="setService(this,'PIO to OCI Conversion','&#128203;')"><div class="svc-ico">&#128203;</div> PIO to OCI</div>
+          <div class="svc-item" onclick="setService(this,'Citizenship &amp; Naturalization','&#127963;')"><div class="svc-ico">&#127963;</div> Naturalization</div>
+          <div class="svc-item" onclick="setService(this,'Surrender Certificate','&#128196;')"><div class="svc-ico">&#128196;</div> Surrender Certificate</div>
+        </div>
+      </div>
+
+      <div class="sb-panel" id="sbTab-certificates">
+        <div class="svc-group-label">Attestation</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'Attestation Services','&#128206;')"><div class="svc-ico">&#128206;</div> Attestation Services</div>
+          <div class="svc-item" onclick="setService(this,'Police Clearance Certificate','&#128110;')"><div class="svc-ico">&#128110;</div> Police Clearance (PCC)</div>
+        </div>
+        <div class="svc-group-label">Certificates</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'Birth Certificate','&#128118;')"><div class="svc-ico">&#128118;</div> Birth Certificate</div>
+          <div class="svc-item" onclick="setService(this,'Name Change Certificate','&#9998;')"><div class="svc-ico">&#9998;</div> Name Change</div>
+          <div class="svc-item" onclick="setService(this,'NOC for Newborn Naming','&#128196;')"><div class="svc-ico">&#128196;</div> NOC Newborn Naming</div>
+          <div class="svc-item" onclick="setService(this,'Non-Nationality Certificate','&#127963;')"><div class="svc-ico">&#127963;</div> Non-Nationality Cert</div>
+          <div class="svc-item" onclick="setService(this,'NRI Certificate','&#127758;')"><div class="svc-ico">&#127758;</div> NRI Certificate</div>
+          <div class="svc-item" onclick="setService(this,'Death Certificate &amp; Repatriation','&#129703;')"><div class="svc-ico">&#129703;</div> Death &amp; Repatriation</div>
+        </div>
+        <div class="svc-group-label">Other</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'International Driving Permit','&#128663;')"><div class="svc-ico">&#128663;</div> Driving Permit (IDP)</div>
+          <div class="svc-item" onclick="setService(this,'eCARe Portal','&#129703;')"><div class="svc-ico">&#129703;</div> eCARe Portal</div>
+          <div class="svc-item" onclick="setService(this,'Postal Applications','&#128236;')"><div class="svc-ico">&#128236;</div> Postal Applications</div>
+        </div>
+      </div>
+
+      <div class="sb-panel" id="sbTab-community">
+        <div class="svc-group-label">Registration</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'Register as Indian National','&#128203;')"><div class="svc-ico">&#128203;</div> Register as NRI</div>
+          <div class="svc-item" onclick="setService(this,'Indian Student Registration','&#127979;')"><div class="svc-ico">&#127979;</div> Student Registration</div>
+          <div class="svc-item" onclick="setService(this,'Overseas Voter Registration','&#128228;')"><div class="svc-ico">&#128228;</div> Overseas Voter</div>
+        </div>
+        <div class="svc-group-label">Welfare &amp; Support</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'MADAD Portal','&#129309;')"><div class="svc-ico">&#129309;</div> MADAD Portal</div>
+          <div class="svc-item" onclick="setService(this,'Indian Community Welfare Fund','&#128155;')"><div class="svc-ico">&#128155;</div> Welfare Fund</div>
+          <div class="svc-item" onclick="setService(this,'Weekly Open House','&#128197;')"><div class="svc-ico">&#128197;</div> Weekly Open House</div>
+        </div>
+        <div class="svc-group-label">Advisories</div>
+        <div class="svc-list">
+          <div class="svc-item" onclick="setService(this,'Fraud Advisory','&#128680;')"><div class="svc-ico">&#128680;</div> Fraud Advisory</div>
+        </div>
+      </div>
+
+      <div class="sb-section" style="flex-shrink:0">
+        <div class="sb-label">Key Info</div>
+        <div class="ctx-info-box" id="ctxInfoBox"></div>
+      </div>
+      <div class="sb-section" id="trackerSection" style="display:none;flex-shrink:0">
+        <div class="sb-label" style="display:flex;align-items:center;justify-content:space-between">
+          My Applications
+          <span id="trackerBadge" style="background:var(--saffron);color:var(--ink);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700"></span>
+        </div>
+        <div id="trackerPanel"><div class="tracker-empty">No applications yet</div></div>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="chat-area">
+      <div class="context-bar">
+        <div class="ctx-chip highlight" id="chipNationality">🇮🇳 Indian</div>
+        <div class="ctx-chip" style="color:var(--ash-muted)">currently in</div>
+        <div class="ctx-chip highlight" id="chipResidence">🇩🇪 Germany</div>
+        <div class="ctx-chip" id="chipService" style="margin-left:auto">🛂 Visa Applications</div>
+      </div>
+
+      <div class="chat-msgs" id="chatMsgs"></div>
+      <div class="followup-bank" id="followupBank" style="display:none">
+        <div class="followup-label">Common questions — tap to ask</div>
+      </div>
+
+      <!-- Persistent follow-up question bank -->
+      <div class="followup-bank" id="followupBank" style="display:none;margin:0 24px 12px">
+        <div class="followup-label">Common questions — tap to ask</div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="input-wrap">
+          <textarea class="chat-in" id="chatIn" placeholder="Ask about your specific consular situation…" rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send" onclick="sendMsg()">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tracker Modal -->
+<div class="modal-ov hidden" id="trackerModal">
+  <div class="modal" style="max-width:500px;max-height:88vh;overflow-y:auto">
+    <div class="modal-h">
+      <div class="modal-ico" style="background:rgba(232,147,58,.15);border-color:rgba(232,147,58,.35)">&#128203;</div>
+      <div>
+        <div class="modal-title" style="color:var(--saffron-light)" id="trackModalTitle">Application Status</div>
+        <div class="modal-sub" id="trackModalRef"></div>
+      </div>
+    </div>
+    <div id="trackModalBody"></div>
+    <button class="modal-close" style="margin-top:14px" onclick="closeTracker()">Close</button>
+  </div>
+</div>
+<!-- Emergency Modal -->
+<div class="modal-ov hidden" id="sosModal">
+  <div class="modal" style="max-width:540px;max-height:88vh;overflow-y:auto">
+
+    <div class="modal-h">
+      <div class="modal-ico">🆘</div>
+      <div>
+        <div class="modal-title">Emergency Assistance</div>
+        <div class="modal-sub">Select your situation for immediate guidance</div>
+      </div>
+    </div>
+
+    <!-- Triage selector -->
+    <div id="emergencyTriage">
+      <div class="emer-grid">
+        <div class="emer-cat" onclick="selectEmerCategory('death')">
+          <div class="emer-cat-ico">🕊️</div>
+          <div class="emer-cat-label">Death Abroad</div>
+          <div class="emer-cat-sub">Repatriation, certificates, support</div>
+        </div>
+        <div class="emer-cat" onclick="selectEmerCategory('accident')">
+          <div class="emer-cat-ico">🚑</div>
+          <div class="emer-cat-label">Accident / Injury</div>
+          <div class="emer-cat-sub">Hospital, legal, consular help</div>
+        </div>
+        <div class="emer-cat" onclick="selectEmerCategory('mental')">
+          <div class="emer-cat-ico">🧠</div>
+          <div class="emer-cat-label">Mental Health Crisis</div>
+          <div class="emer-cat-sub">Crisis support, helplines, intervention</div>
+        </div>
+        <div class="emer-cat" onclick="selectEmerCategory('financial')">
+          <div class="emer-cat-ico">💸</div>
+          <div class="emer-cat-label">Financial Distress</div>
+          <div class="emer-cat-sub">Stranded, funds, emergency loan</div>
+        </div>
+        <div class="emer-cat" onclick="selectEmerCategory('passport')">
+          <div class="emer-cat-ico">📄</div>
+          <div class="emer-cat-label">Lost / Stolen Passport</div>
+          <div class="emer-cat-sub">Emergency travel document</div>
+        </div>
+        <div class="emer-cat" onclick="selectEmerCategory('arrested')">
+          <div class="emer-cat-ico">⚖️</div>
+          <div class="emer-cat-label">Arrested / Detained</div>
+          <div class="emer-cat-sub">Legal aid, consular visit rights</div>
+        
+        <div class="emer-cat" onclick="selectEmerCategory('hostage')">
+          <div class="emer-cat-ico">&#128274;</div>
+          <div class="emer-cat-label">Hostage / Kidnapping</div>
+          <div class="emer-cat-sub">Abduction, held against will</div>
+        </div>
+        <div class="emer-cat" onclick="selectEmerCategory('missing')">
+          <div class="emer-cat-ico">&#128373;</div>
+          <div class="emer-cat-label">Missing Person</div>
+          <div class="emer-cat-sub">Indian national unaccounted for</div>
+        </div>
+        <div class="emer-cat" onclick="selectEmerCategory('medical_critical')">
+          <div class="emer-cat-ico">&#128680;</div>
+          <div class="emer-cat-label">Critical Medical</div>
+          <div class="emer-cat-sub">Life-threatening emergency</div>
+        </div>
+      </div>
+      </div>
+      <div style="margin:16px 0 8px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--saffron);margin-bottom:8px">Consulate Hotlines</div>
+        <div class="ec-list" id="ecList"></div>
+      </div>
+    </div>
+
+    <!-- Situation detail panel (hidden by default) -->
+    <div id="emerDetail" style="display:none">
+      <button onclick="backToTriage()" style="background:none;border:none;color:var(--ash-muted);font-size:12px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:5px">← Back</button>
+      <div id="emerDetailContent"></div>
+    </div>
+
+    <button class="modal-close" style="margin-top:14px" onclick="closeSOS()">Close</button>
+  </div>
+</div>
+
+
+
+
+<script>
+// ============================================================
+// ConsulAI v7 — Complete JS (no template literals)
+// ============================================================
+
+// ── DATA ──
+var COUNTRIES = {
+  IN: { name: 'India',   flag: '\uD83C\uDDEE\uD83C\uDDF3', demonym: 'Indian',  emer: '+91-11-2419-8000' },
+  US: { name: 'USA',     flag: '\uD83C\uDDFA\uD83C\uDDF8', demonym: 'American', emer: '+1-202-501-4444'  },
+  GB: { name: 'UK',      flag: '\uD83C\uDDEC\uD83C\uDDE7', demonym: 'British',  emer: '+44-20-7008-5000' },
+  DE: { name: 'Germany', flag: '\uD83C\uDDE9\uD83C\uDDEA', demonym: 'German',   emer: '+49-30-1817-2000' },
+  AE: { name: 'UAE',     flag: '\uD83C\uDDE6\uD83C\uDDEA', demonym: 'Emirati',  emer: '+971-2-495-1235'  }
+};
+
+var CTX_DATA = {
+  'IN-DE': {
+    consulate: 'Multiple offices by German state',
+    passportRenew: 'Online via Passport Seva; appointment at your jurisdiction consulate',
+    visaNote: 'Schengen visa for EU travel; separate visa for non-EU countries',
+    emergencyDoc: 'Emergency Certificate (EC) issued within 24-48 hrs',
+    ociNote: 'OCI card mandatory for frequent India travel; apply via VFS Global Germany',
+    keyLink: 'cgimunich.gov.in',
+    processingOffice: 'See jurisdiction selector',
+    infoRows: [
+      ['Passport Renewal', '~6-8 weeks'],
+      ['EC (Emergency)', '24-48 hrs'],
+      ['OCI Applications', 'Via VFS Global DE'],
+      ['Schengen Status', 'Covered by German permit'],
+      ['Offices in Germany', 'Berlin, Frankfurt, Hamburg, Munich']
+    ]
+  },
+  'IN-US': {
+    consulate: 'Indian Consulate (NY/SF/Houston/Chicago) or Embassy DC',
+    passportRenew: 'Online via Passport Seva; nearest Indian Consulate in USA',
+    visaNote: 'US visa separate; no Schengen privileges',
+    emergencyDoc: 'Emergency Certificate issued same-day',
+    ociNote: 'OCI card: apply via BLS International USA',
+    keyLink: 'indianembassyusa.gov.in',
+    processingOffice: 'Nearest Indian Consulate (NY/SF/Chicago/Houston)',
+    infoRows: [
+      ['Jurisdiction', 'By US state of residence'],
+      ['Passport Renewal', '~8-10 weeks'],
+      ['EC (Emergency)', 'Same day'],
+      ['OCI Applications', 'Via BLS International USA'],
+      ['US Visa', 'Separate requirement']
+    ]
+  },
+  'IN-GB': {
+    consulate: 'Indian High Commission London',
+    passportRenew: 'Via VFS Global UK; online booking required',
+    visaNote: 'UK visa separate; no EU/Schengen post-Brexit',
+    emergencyDoc: 'Emergency Travel Document from Indian High Commission',
+    ociNote: 'OCI card via VFS Global UK',
+    keyLink: 'hcilondon.gov.in',
+    processingOffice: 'Indian High Commission, London',
+    infoRows: [
+      ['Passport Renewal', '~6-8 weeks (VFS UK)'],
+      ['EC (Emergency)', '24 hrs'],
+      ['OCI Applications', 'Via VFS Global UK'],
+      ['UK Visa Required', 'Yes — separate from OCI']
+    ]
+  },
+  'IN-AE': {
+    consulate: 'Indian Embassy Abu Dhabi / CGI Dubai',
+    passportRenew: 'Via VFS Global UAE; Tatkal option available',
+    visaNote: 'UAE residence visa required; OCI valid for India travel',
+    emergencyDoc: 'Emergency Certificate issued within 24 hrs',
+    ociNote: 'OCI applications via VFS Global UAE',
+    keyLink: 'indembassyuae.gov.in',
+    processingOffice: 'Consulate General of India, Dubai',
+    infoRows: [
+      ['Passport Renewal', '~3-4 weeks (Tatkal: 1 wk)'],
+      ['EC (Emergency)', '24 hrs'],
+      ['OCI Applications', 'Via VFS Global UAE'],
+      ['UAE Residency', 'Required for most services']
+    ]
+  }
+};
+
+var GERMAN_CONSULATES = {
+  berlin: {
+    name: 'Embassy of India, Berlin',
+    address: 'Tiergartenstrasse 17, 10785 Berlin',
+    phone: '+49-30-2579-500',
+    email: 'cons.berlin@mea.gov.in',
+    website: 'indianembassyberlin.gov.in',
+    states: ['Berlin', 'Brandenburg', 'Mecklenburg-Vorpommern', 'Sachsen', 'Sachsen-Anhalt', 'Th\u00fcringen'],
+    emergency: '+49-30-2579-500',
+    appointmentUrl: 'https://appointment.indianembassyberlin.gov.in/',
+    appointmentNote: 'Online appointment required via embassy portal',
+    hours: { weekdays: '09:00 \u2013 17:00', slots: [{ label: 'Submission', time: '09:00 \u2013 12:30' },{ label: 'Lunch Break', time: '12:30 \u2013 15:00' },{ label: 'Collection', time: '15:00 \u2013 17:00' }], weekend: 'Closed' },
+    holidays2025: ['Jan 26 (Republic Day)','Mar 14 (Holi)','Apr 18 (Good Friday)','May 1 (Labour Day)','Aug 15 (Independence Day)','Oct 2 (Gandhi Jayanti)','Nov 5 (Diwali)','Dec 25 (Christmas)'],
+    note: 'Handles passport, OCI, visa and all consular services for eastern Germany'
+  },
+  frankfurt: {
+    name: 'Consulate General of India, Frankfurt',
+    address: 'Friedrich-Ebert-Anlage 26, 60325 Frankfurt am Main',
+    phone: '+49-69-1530-050',
+    email: 'cgi.frankfurt@mea.gov.in',
+    website: 'cgifrankfurt.gov.in',
+    states: ['Hessen', 'Nordrhein-Westfalen', 'Rheinland-Pfalz', 'Saarland'],
+    emergency: '+49-69-1530-050',
+    appointmentUrl: 'https://cgifrankfurt.gov.in/pages/consular-services',
+    appointmentNote: 'Walk-in accepted \u2014 no prior appointment needed with complete documents',
+    hours: { weekdays: '09:00 \u2013 16:30', slots: [{ label: 'Submission', time: '09:00 \u2013 13:00' },{ label: 'Lunch Break', time: '13:00 \u2013 15:00' },{ label: 'Collection', time: '15:00 \u2013 16:30' }], weekend: 'Closed' },
+    holidays2025: ['Jan 26 (Republic Day)','Mar 14 (Holi)','Apr 18 (Good Friday)','May 1 (Labour Day)','Aug 15 (Independence Day)','Oct 2 (Gandhi Jayanti)','Nov 5 (Diwali)','Dec 25\u201326 (Christmas)'],
+    note: 'No prior appointment needed; walk-in with complete documents'
+  },
+  hamburg: {
+    name: 'Consulate General of India, Hamburg',
+    address: 'Kohlh\u00f6fen 21, 20355 Hamburg',
+    phone: '+49-40-338-036',
+    email: 'cons.hamburg@mea.gov.in',
+    website: 'cgihamburg.gov.in',
+    states: ['Hamburg', 'Bremen', 'Schleswig-Holstein', 'Niedersachsen'],
+    emergency: '+49-152-18925690',
+    appointmentUrl: 'https://cgihamburg.gov.in/pages/consular-services',
+    appointmentNote: 'Online appointment only \u2014 book via consulate portal',
+    hours: { weekdays: '09:30 \u2013 16:00', slots: [{ label: 'Submission', time: '09:30 \u2013 12:30' },{ label: 'Lunch Break', time: '12:30 \u2013 15:00' },{ label: 'Collection', time: '15:00 \u2013 16:00' }], weekend: 'Closed' },
+    holidays2025: ['Jan 26 (Republic Day)','Mar 14 (Holi)','Apr 18 (Good Friday)','May 1 (Labour Day)','Aug 15 (Independence Day)','Oct 2 (Gandhi Jayanti)','Oct 3 (German Unity Day)','Nov 5 (Diwali)','Dec 25 (Christmas)'],
+    note: 'Online appointment mandatory from Jan 2026'
+  },
+  munich: {
+    name: 'Consulate General of India, Munich',
+    address: 'Widenmayerstrasse 15, 80538 Munich',
+    phone: '+49-89-210-23943',
+    email: 'cons.munich@mea.gov.in',
+    website: 'cgimunich.gov.in',
+    states: ['Bayern', 'Baden-W\u00fcrttemberg'],
+    emergency: '+49-1511-766-2009',
+    appointmentUrl: 'https://www.passportindia.gov.in',
+    appointmentNote: 'Appointment via Passport Seva portal \u2014 book online before visiting',
+    hours: { weekdays: '09:00 \u2013 16:30', slots: [{ label: 'Submission', time: '09:00 \u2013 12:00' },{ label: 'Lunch Break', time: '12:00 \u2013 15:00' },{ label: 'Collection', time: '15:00 \u2013 16:30' }], weekend: 'Closed' },
+    holidays2025: ['Jan 26 (Republic Day)','Mar 14 (Holi)','Apr 18 (Good Friday)','May 1 (Labour Day)','Oct 2 (Gandhi Jayanti)','Oct 3 (German Unity Day)','Nov 1 (All Saints/DE)','Nov 5 (Diwali)','Dec 25\u201326 (Christmas)'],
+    note: 'Emergency WhatsApp available after hours; OCI and visa services also available'
+  }
+};
+
+var STATE_TO_CONSULATE = {
+  'Berlin':'berlin','Brandenburg':'berlin','Mecklenburg-Vorpommern':'berlin',
+  'Sachsen':'berlin','Sachsen-Anhalt':'berlin','Th\u00fcringen':'berlin',
+  'Hessen':'frankfurt','Nordrhein-Westfalen':'frankfurt','Rheinland-Pfalz':'frankfurt','Saarland':'frankfurt',
+  'Hamburg':'hamburg','Bremen':'hamburg','Schleswig-Holstein':'hamburg','Niedersachsen':'hamburg',
+  'Bayern':'munich','Baden-W\u00fcrttemberg':'munich'
+};
+
+var VISA_MATRIX = {
+  'IN->IN':'not_required','IN->DE':'required','IN->US':'required','IN->GB':'required','IN->AE':'on_arrival',
+  'DE->DE':'not_required','DE->IN':'evisa','DE->US':'not_required','DE->GB':'not_required','DE->AE':'not_required',
+  'US->US':'not_required','US->IN':'required','US->DE':'not_required','US->GB':'not_required','US->AE':'not_required',
+  'GB->GB':'not_required','GB->IN':'evisa','GB->DE':'not_required','GB->US':'not_required','GB->AE':'not_required',
+  'AE->AE':'not_required','AE->IN':'required','AE->DE':'not_required','AE->US':'not_required','AE->GB':'not_required'
+};
+
+var EMER_DATA = {
+  death:     { title: '\uD83D\uDD4A\uFE0F Death of a Citizen Abroad',   steps: [{ t:'Contact local authorities', b:'Obtain a <strong>local death certificate</strong> from police. Required for all further steps.' },{ t:'Notify the Indian Consulate', b:'Call your nearest Indian consulate immediately for repatriation guidance.' },{ t:'Arrange repatriation', b:'Consulate assists with <strong>embalming, coffin, and air transport</strong> documents.' },{ t:'Get Indian Death Certificate', b:'Register death at consulate for insurance and property matters.' }], hotlines:[{ n:'MEA Emergency (India)', num:'+91-11-2301-2113', note:'24/7' },{ n:'German Police', num:'110', note:'Free' }] },
+  accident:  { title: '\uD83D\uDE91 Accident / Serious Injury',          steps: [{ t:'Call emergency services', b:'<strong>112</strong> for ambulance in Germany. <strong>110</strong> for police.' },{ t:'Go to hospital', b:'All German hospitals must provide <strong>emergency treatment</strong> regardless of insurance.' },{ t:'Contact the consulate', b:'Consulate assists with police liaison, legal rights, and family notification.' },{ t:'Document everything', b:'Collect <strong>police report, discharge papers, photos</strong> for insurance claims.' }], hotlines:[{ n:'Germany Emergency', num:'112', note:'Free' },{ n:'Germany Police', num:'110', note:'Free' }] },
+  mental:    { title: '\uD83E\uDDE0 Mental Health Crisis',                steps: [{ t:'Call crisis line now', b:'Telefonseelsorge: <strong>0800 111 0 111</strong> \u2014 free, 24/7, anonymous, English available.' },{ t:'If in immediate danger', b:'Call <strong>112</strong> or go to nearest hospital <strong>Notaufnahme (A&E)</strong>.' },{ t:'Indian community support', b:'iCall India: <strong>+91-9152987821</strong> for culturally sensitive counselling.' },{ t:'Long-term support', b:'German public insurance (GKV) covers <strong>psychotherapy</strong>. Ask GP for referral.' }], hotlines:[{ n:'Telefonseelsorge (DE)', num:'0800 111 0 111', note:'24/7 Free' },{ n:'iCall India', num:'+91-9152987821', note:'Mon-Sat' }] },
+  financial: { title: '\uD83D\uDCB8 Financial Distress / Stranded',       steps: [{ t:'Contact the consulate first', b:'Consulate can arrange emergency financial assistance in exceptional cases.' },{ t:'Repatriation assistance', b:'If no funds for return flight, consulate may facilitate an <strong>emergency loan</strong>.' },{ t:'Money transfer', b:'Ask family to send funds via <strong>Western Union, Wise, or SWIFT</strong>.' },{ t:'Local social services', b:'German <strong>Sozialamt</strong> (Social Welfare Office) can provide emergency aid.' }], hotlines:[{ n:'MEA Emergency Cell', num:'+91-11-2301-2113', note:'24/7' },{ n:'Sozialamt (Germany)', num:'115', note:'Free' }] },
+  passport:  { title: '\uD83D\uDCC4 Lost / Stolen Passport',              steps: [{ t:'File a police report', b:'Go to nearest <strong>Polizei</strong> and file a report (Anzeige). Obtain a copy.' },{ t:'Inform the consulate', b:'Call your Indian consulate with police report + <strong>2 passport photos</strong>.' },{ t:'Apply for Emergency Certificate', b:'An <strong>EC</strong> is issued within 24-48 hours for travel back to India only.' },{ t:'Apply for fresh passport', b:'For continued stay, apply via <strong>Passport Seva portal</strong> and book consulate appointment.' }], hotlines:[{ n:'German Police', num:'110', note:'Free' }] },
+  arrested:  { title: '\u2696\uFE0F Arrested / Detained',                 steps: [{ t:'Request consular notification', b:'Under the <strong>Vienna Convention</strong> you have the right to contact your consulate.' },{ t:'Do not sign anything', b:'Do not sign documents without a lawyer or consular representative.' },{ t:'Consulate appoints a lawyer', b:'Indian consulate provides a <strong>list of lawyers</strong> and can visit you in detention.' },{ t:'Apply for legal aid', b:'Apply for <strong>Prozesskostenhilfe</strong> (legal aid) if you cannot afford a lawyer.' }], hotlines:[{ n:'German Legal Aid', num:'0800 100 3210', note:'Free' }] }
+};
+
+// ── STATE ──
+function getCtxKey() { return userNationality + '-' + userResidence; }
+function getCtxData() { return CTX_DATA[getCtxKey()] || null; }
+function getConsulateForState(state) { var k = STATE_TO_CONSULATE[state]; return k ? GERMAN_CONSULATES[k] : null; }
+function getVisaStatus(f, t) { return VISA_MATRIX[f + '->' + t] || 'required'; }
+
+var userNationality = 'IN';
+var userResidence   = 'DE';
+var currentService  = 'Visa Services';
+var selectedGermanState = null;
+var isTyping = false;
+
+// ── ONBOARDING ──
+function selectNationality(el) {
+  document.querySelectorAll('#nationalityGrid .flag-btn').forEach(function(b){ b.classList.remove('selected'); });
+  el.classList.add('selected');
+  userNationality = el.dataset.code;
+}
+function selectResidence(el) {
+  document.querySelectorAll('#residenceGrid .flag-btn').forEach(function(b){ b.classList.remove('selected'); });
+  el.classList.add('selected');
+  userResidence = el.dataset.code;
+  var picker = document.getElementById('statePickerSection');
+  if (userResidence === 'DE') { picker.style.display = 'block'; }
+  else { picker.style.display = 'none'; selectedGermanState = null; }
+}
+function onStateChange(val) {
+  selectedGermanState = val || null;
+  var preview = document.getElementById('consulatePreview');
+  if (val) {
+    var c = getConsulateForState(val);
+    if (c) {
+      document.getElementById('consulatePreviewName').textContent = c.name;
+      document.getElementById('consulatePreviewAddr').textContent = c.address;
+      preview.style.display = 'block';
+    }
+  } else { preview.style.display = 'none'; }
+}
+
+function startApp() {
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  document.getElementById('headerCtx').textContent = nat.flag + ' ' + nat.demonym + ' in ' + res.flag + ' ' + res.name;
+  document.getElementById('sb-flag1').textContent = nat.flag;
+  document.getElementById('sb-flag2').textContent = res.flag;
+  document.getElementById('sb-id-top').textContent = nat.demonym + ' National';
+  var stateLabel = (userResidence === 'DE' && selectedGermanState) ? selectedGermanState + ', Germany' : 'Residing in ' + res.name;
+  document.getElementById('sb-id-bottom').textContent = stateLabel;
+  document.getElementById('chipNationality').textContent = nat.flag + ' ' + nat.demonym;
+  document.getElementById('chipResidence').textContent = res.flag + ' ' + res.name;
+  updateSidebarInfo();
+  buildEmergencyContacts();
+  document.getElementById('onboarding').classList.add('exit');
+  document.getElementById('app').classList.add('visible');
+  setTimeout(function(){ sendWelcome(); }, 300);
+  setTimeout(function(){ updateFollowupBank(); renderTrackerSidebar(); }, 400);
+}
+function goBack() {
+  document.getElementById('onboarding').classList.remove('exit');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('chatMsgs').innerHTML = '';
+}
+
+// ── SIDEBAR INFO ──
+function updateSidebarInfo() {
+  var ctx = getCtxData();
+  var box = document.getElementById('ctxInfoBox');
+  if (!box) return;
+  if (!ctx) { box.innerHTML = '<div style="font-size:12px;color:var(--ash-muted)">General consular info available.</div>'; return; }
+  if (userNationality === 'IN' && userResidence === 'DE' && selectedGermanState) {
+    var c = getConsulateForState(selectedGermanState);
+    if (c) {
+      var apptUrl = c.appointmentUrl || ('https://' + c.website);
+      var renewRow = ctx.infoRows.find(function(r){ return r[0] === 'Passport Renewal'; });
+      var rows = [
+        { k:'Your Consulate', v: c.name.replace('Consulate General of India, ','CGI ').replace('Embassy of India, ','Embassy ') },
+        { k:'Phone',          v: c.phone },
+        { k:'Jurisdiction',   v: c.states.slice(0,2).join(', ') + (c.states.length > 2 ? ' +' + (c.states.length-2) + ' more' : '') },
+        { k:'Appointment',    v: '<a href="' + apptUrl + '" target="_blank" style="color:var(--saffron);text-decoration:none;font-weight:600">Book \u2197</a>' },
+        { k:'Renewal Time',   v: renewRow ? renewRow[1] : '~6-8 weeks' }
+      ];
+      box.innerHTML = rows.map(function(r){ return '<div class="ctx-row"><span class="ctx-key">' + r.k + '</span><span class="ctx-val">' + r.v + '</span></div>'; }).join('');
+      return;
+    }
+  }
+  box.innerHTML = ctx.infoRows.map(function(r){ return '<div class="ctx-row"><span class="ctx-key">' + r[0] + '</span><span class="ctx-val">' + r[1] + '</span></div>'; }).join('');
+}
+
+// ── EMERGENCY CONTACTS ──
+function buildEmergencyContacts() {
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  var list = document.getElementById('ecList');
+  if (userNationality === 'IN' && userResidence === 'DE') {
+    var specificC = selectedGermanState ? getConsulateForState(selectedGermanState) : null;
+    var primaryBlock = '';
+    if (specificC) {
+      primaryBlock = '<div class="ec"><span class="ec-flag">\uD83C\uDFDB\uFE0F</span><div class="ec-info"><div class="ec-country">' + specificC.name + '</div><div class="ec-num">' + specificC.emergency + '</div><div style="font-size:10px;color:var(--ash-muted);margin-top:2px">Your jurisdiction: ' + (selectedGermanState||'') + '</div></div><button class="ec-btn">Call</button></div>';
+    }
+    var allC = Object.values(GERMAN_CONSULATES).map(function(c){
+      return '<div class="ec"><span class="ec-flag">' + COUNTRIES.IN.flag + '</span><div class="ec-info"><div class="ec-country">' + c.name + '</div><div class="ec-num">' + c.emergency + '</div><div style="font-size:10px;color:var(--ash-muted);margin-top:2px">' + c.states.slice(0,2).join(', ') + (c.states.length>2?'...':'') + '</div></div><button class="ec-btn">Call</button></div>';
+    }).join('');
+    list.innerHTML = (specificC ? '<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--saffron);margin-bottom:6px">Your Consulate</div>' + primaryBlock + '<div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ash-muted);margin:10px 0 6px">All Indian Offices in Germany</div>' : '') + allC;
+    return;
+  }
+  var ctx = getCtxData();
+  var officeName = ctx ? ctx.processingOffice.split(',')[0] : 'Embassy';
+  list.innerHTML = '<div class="ec"><span class="ec-flag">' + nat.flag + '</span><div class="ec-info"><div class="ec-country">' + nat.name + ' ' + officeName + '</div><div class="ec-num">' + nat.emer + '</div></div><button class="ec-btn">Call</button></div>' +
+    '<div class="ec"><span class="ec-flag">' + res.flag + '</span><div class="ec-info"><div class="ec-country">' + res.name + ' Emergency Services</div><div class="ec-num">' + res.emer + '</div></div><button class="ec-btn">Call</button></div>' +
+    '<div class="ec"><span class="ec-flag">\uD83C\uDF10</span><div class="ec-info"><div class="ec-country">24/7 Global Consular Helpline</div><div class="ec-num">+1-888-407-4747</div></div><button class="ec-btn">Call</button></div>';
+}
+
+// ── HOURS + CONSULATE CARD BUILDERS ──
+function buildHoursBlock(h) {
+  if (!h) return '';
+  var slots = (h.slots||[]).map(function(s){ return '<div class="hours-slot"><span class="hours-slot-label">' + s.label + '</span><span class="hours-slot-time">' + s.time + '</span></div>'; }).join('');
+  return '<div class="section-label">Opening Hours</div>' +
+    '<div class="hours-block">' +
+      '<div class="hours-day-row"><span class="hours-day-label">Monday \u2013 Friday</span><span class="hours-day-time">' + (h.weekdays||'') + '</span></div>' +
+      '<div class="hours-slots">' + slots + '</div>' +
+      '<div class="hours-weekend"><span class="hours-weekend-label">Saturday \u2013 Sunday</span><span class="hours-weekend-val">' + (h.weekend||'Closed') + '</span></div>' +
+    '</div>';
+}
+
+function buildConsulateCard(consulate) {
+  var apptUrl = consulate.appointmentUrl || ('https://' + consulate.website);
+  var apptBtn = '<a href="' + apptUrl + '" target="_blank" class="appt-btn">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Book Appointment</a>';
+  var apptNote = '<div class="alert info" style="margin-bottom:12px">\u2139\uFE0F ' + (consulate.appointmentNote||consulate.appointment||'') + '</div>';
+  var infoGrid = '<div class="info-grid">' +
+    '<div class="info-cell"><div class="ic-label">Name</div><div class="ic-val">' + consulate.name + '</div></div>' +
+    '<div class="info-cell"><div class="ic-label">Address</div><div class="ic-val">' + consulate.address + '</div></div>' +
+    '<div class="info-cell"><div class="ic-label">Phone</div><div class="ic-val">' + consulate.phone + '</div></div>' +
+    '<div class="info-cell"><div class="ic-label">Email</div><div class="ic-val">' + consulate.email + '</div></div>' +
+    '</div>';
+  var pills = (consulate.holidays2025||[]).map(function(h){ var p=h.split(' ('); return '<div class="holiday-pill"><strong>'+p[0]+'</strong>'+(p[1]?' ('+p[1]:'')+'</div>'; }).join('');
+  return apptBtn + apptNote + infoGrid + buildHoursBlock(consulate.hours) +
+    '<div class="section-label">2025 Closures</div><div class="holiday-list">' + pills + '</div>' +
+    '<div class="section-label">Jurisdiction</div><div style="font-size:12px;color:var(--ash)">' + consulate.states.join(', ') + '</div>';
+}
+
+// ── VISA PANEL ──
+function buildVisaPanel(passportCode, destCode, labelPrefix) {
+  var passport = COUNTRIES[passportCode];
+  var dest = COUNTRIES[destCode];
+  var status = getVisaStatus(passportCode, destCode);
+  var statusMap = {
+    not_required: { label:'No Visa Required', color:'var(--green)',   icon:'\u2705', alertClass:'ok' },
+    on_arrival:   { label:'Visa on Arrival',  color:'var(--saffron)', icon:'\uD83D\uDFE1', alertClass:'warn' },
+    evisa:        { label:'e-Visa Available', color:'var(--blue)',    icon:'\uD83D\uDCBB', alertClass:'info' },
+    required:     { label:'Visa Required',    color:'var(--red)',     icon:'\uD83D\uDD34', alertClass:'emer' }
+  };
+  var s = statusMap[status];
+  var details = {
+    not_required: passport.demonym + ' passport holders do <strong>not need a visa</strong> to enter ' + dest.name + '.',
+    on_arrival:   passport.demonym + ' passport holders can obtain a <strong>Visa on Arrival</strong> at ' + dest.name + ' airports.',
+    evisa:        passport.demonym + ' passport holders can apply for an <strong>e-Visa online</strong> before traveling to ' + dest.name + '.',
+    required:     passport.demonym + ' passport holders <strong>require a visa</strong> to enter ' + dest.name + '. Apply at the embassy before travel.'
+  };
+  return '<div style="margin-bottom:10px">' +
+    '<div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--ash-muted);margin-bottom:6px">' + labelPrefix + '</div>' +
+    '<div class="info-grid" style="grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+      '<div class="info-cell"><div class="ic-label">Passport</div><div class="ic-val">' + passport.flag + ' ' + passport.name + '</div></div>' +
+      '<div class="info-cell"><div class="ic-label">Destination</div><div class="ic-val">' + dest.flag + ' ' + dest.name + '</div></div>' +
+    '</div>' +
+    '<div class="alert ' + s.alertClass + '" style="align-items:center">' +
+      '<span style="font-size:16px">' + s.icon + '</span>' +
+      '<div><strong style="color:' + s.color + '">' + s.label + '</strong><br><span style="font-size:12px">' + details[status] + '</span></div>' +
+    '</div></div>';
+}
+
+// ── SERVICE ROUTING ──
+function setService(el, name, icon) {
+  document.querySelectorAll('.svc-item').forEach(function(s){ s.classList.remove('active'); });
+  el.classList.add('active');
+  currentService = name;
+  document.getElementById('chipService').textContent = icon + ' ' + name;
+  updateFollowupBank();
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  var ctx = getCtxData();
+  if (name === 'Visa Applications') { renderVisaService(nat, res, ctx); return; }
+  if (name === 'Passport Services') { renderPassportService(nat, res, ctx); return; }
+  var msgs = {
+    'Travel Advisories': 'Switched to <strong>Travel Advisories</strong>. I will provide travel information relevant to a <strong>' + nat.demonym + ' passport holder</strong> traveling from <strong>' + res.name + '</strong>.',
+    'Citizenship & Naturalization': 'Switched to <strong>Citizenship & Naturalization</strong>. As a <strong>' + nat.demonym + ' national in ' + res.name + '</strong>, I can help with naturalization eligibility, OCI card, and dual citizenship rules. Note: India does <strong>not permit dual citizenship</strong>.',
+    'Emergency Support': '<strong>Emergency Support</strong> activated. Your nearest consulate: <strong>' + (getCtxData() ? getCtxData().processingOffice : nat.name + ' Embassy in ' + res.name) + '</strong>.'
+  };
+  var qrs = {
+    'Travel Advisories': ['Visa-free countries for ' + nat.demonym + ' passport', 'Entry rules for ' + res.name + ' residents', 'Health & vaccination needs', 'Travel insurance tips'],
+    'Citizenship & Naturalization': [res.name + ' naturalization eligibility', 'OCI vs PIO card', 'Dual citizenship rules', 'Renouncing ' + nat.name + ' citizenship'],
+    'Emergency Support': ['Lost passport in ' + res.name, 'Emergency travel certificate', 'Nearest ' + nat.name + ' consulate', 'I need immediate help']
+  };
+  addAgent(msgs[name] || 'Switched to <strong>' + name + '</strong>.', qrs[name] || []);
+}
+
+function renderVisaService(nat, res, ctx) {
+  var panel1 = buildVisaPanel(userNationality, userResidence, 'Your ' + nat.demonym + ' passport \u2192 Visiting ' + res.name);
+  var panel2 = '', panel2Header = '';
+  if (userNationality !== userResidence) {
+    panel2Header = '<div style="margin-top:4px;padding-top:14px;border-top:1px solid var(--border)">';
+    panel2 = buildVisaPanel(userResidence, userNationality, 'As a ' + res.name + ' resident \u2192 Visiting ' + nat.name) + '</div>';
+  }
+  var noVisa = getVisaStatus(userNationality, userResidence) === 'not_required';
+  var contextNote = '';
+  if (noVisa && userNationality !== userResidence) {
+    contextNote = '<div class="alert info" style="margin-top:4px">\u2139\uFE0F Since you don\'t need a visa for <strong>' + res.name + '</strong> on your ' + nat.name + ' passport, your visa needs relate to <strong>third countries</strong> or your ' + res.name + ' residency permit.</div>';
+  } else if (noVisa) {
+    contextNote = '<div class="alert ok" style="margin-top:4px">\u2705 You are in your home country \u2014 no visa needed.</div>';
+  }
+  var html = 'Checking visa requirements for <strong>' + nat.flag + ' ' + nat.demonym + ' in ' + res.flag + ' ' + res.name + '</strong><div style="margin-top:14px">' + panel1 + contextNote + panel2Header + panel2 + '</div>';
+  var qr = noVisa && userNationality !== userResidence
+    ? ['Apply for visa to 3rd country from ' + res.name, res.name + ' residence permit info', 'Schengen travel rules', 'OCI card for India travel']
+    : getVisaStatus(userNationality, userResidence) === 'required'
+      ? ['Apply for ' + res.name + ' visa', 'Required documents', 'Processing time & fees', 'Book visa appointment']
+      : ['Check e-Visa eligibility', 'Apply for visa on arrival', 'Travel documents needed', '3rd country visa info'];
+  addAgent(html, qr);
+}
+
+function renderPassportService(nat, res, ctx) {
+  if (nat.name === 'India' && res.name === 'Germany') { renderIndiaGermanyPassport(nat, ctx); return; }
+  var renewalTime = ctx ? (ctx.infoRows.find(function(r){return r[0]==='Passport Renewal';})||[null,null])[1]||'~6-8 weeks' : '~6-8 weeks';
+  var office = ctx ? ctx.processingOffice : nat.name + ' Embassy in ' + res.name;
+  var portal = ctx ? ctx.keyLink : 'passportindia.gov.in';
+  var ecTime = ctx ? (ctx.infoRows.find(function(r){return r[0].includes('EC');})||[null,null])[1]||'24-48 hrs' : '24-48 hrs';
+  var ociLine = (ctx && ctx.ociNote) ? '<div class="alert warn" style="margin-top:8px">\u26A0\uFE0F OCI Note: ' + ctx.ociNote + '</div>' : '';
+  var html = '<strong>Passport Services</strong> for ' + nat.flag + ' ' + nat.demonym + ' in ' + res.flag + ' ' + res.name + ':' +
+    '<div class="info-grid" style="margin-top:12px">' +
+    '<div class="info-cell"><div class="ic-label">Processing Office</div><div class="ic-val">' + office + '</div></div>' +
+    '<div class="info-cell"><div class="ic-label">Portal</div><div class="ic-val"><a href="https://' + portal + '" target="_blank">' + portal + '</a></div></div>' +
+    '<div class="info-cell"><div class="ic-label">Renewal Time</div><div class="ic-val">' + renewalTime + '</div></div>' +
+    '<div class="info-cell"><div class="ic-label">Emergency Cert.</div><div class="ic-val">' + ecTime + '</div></div>' +
+    '</div>' + ociLine;
+  addAgent(html, ['Renew ' + nat.name + ' passport', 'Tatkal urgent renewal', 'Lost passport procedure', 'OCI card application']);
+}
+
+function renderIndiaGermanyPassport(nat, ctx) {
+  var consulate = selectedGermanState ? getConsulateForState(selectedGermanState) : null;
+  if (!consulate) {
+    var optgroups = [
+      { label:'Berlin Office', states:['Berlin','Brandenburg','Mecklenburg-Vorpommern','Sachsen','Sachsen-Anhalt','Th\u00fcringen'] },
+      { label:'Frankfurt Office', states:['Hessen','Nordrhein-Westfalen','Rheinland-Pfalz','Saarland'] },
+      { label:'Hamburg Office', states:['Hamburg','Bremen','Schleswig-Holstein','Niedersachsen'] },
+      { label:'Munich Office', states:['Bayern','Baden-W\u00fcrttemberg'] }
+    ];
+    var opts = optgroups.map(function(g){ return '<optgroup label="'+g.label+'">' + g.states.map(function(s){ return '<option value="'+s+'">'+s+'</option>'; }).join('') + '</optgroup>'; }).join('');
+    var html = '<strong>Passport Services \u2014 India in Germany</strong><br><br>Select your German state to see your specific consulate:<select id="inlineStateSelect" class="ob-state-select" style="margin-top:10px;display:block" onchange="inlineStateSelected(this.value)"><option value="">-- Select state --</option>' + opts + '</select>';
+    addAgent(html, []);
+    return;
+  }
+  showConsulatePassportCard(consulate, ctx);
+}
+
+function inlineStateSelected(state) {
+  selectedGermanState = state;
+  document.getElementById('sb-id-bottom').textContent = state + ', Germany';
+  updateSidebarInfo();
+  if (state) { showConsulatePassportCard(getConsulateForState(state), getCtxData()); }
+}
+
+function showConsulatePassportCard(consulate, ctx) {
+  var ociNote = ctx ? ctx.ociNote : 'OCI card via VFS Global Germany';
+  var html = '<strong>Passport Services</strong> \u2014 Indian nationals in <strong>' + (selectedGermanState||'Germany') + '</strong>' +
+    '<div style="margin-top:12px">' + buildConsulateCard(consulate) + '</div>' +
+    '<div class="alert warn" style="margin-top:10px">\u26A0\uFE0F ' + ociNote + '</div>';
+  addAgent(html, [], ['Renew passport at this office','Tatkal urgent renewal','Emergency certificate procedure','OCI card application steps']);
+}
+
+// ── WELCOME ──
+function sendWelcome() {
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  var ctx = getCtxData();
+  var consulate = (userNationality==='IN' && userResidence==='DE' && selectedGermanState) ? getConsulateForState(selectedGermanState) : null;
+  var officeName = consulate ? consulate.name : (ctx ? ctx.processingOffice : nat.name + ' Embassy');
+  var officePhone = consulate ? consulate.phone : nat.emer;
+  var officePortal = consulate ? (consulate.appointmentUrl || ('https://' + consulate.website)) : (ctx ? ctx.keyLink : 'passportindia.gov.in');
+  var renewRow = ctx ? ctx.infoRows.find(function(r){return r[0]==='Passport Renewal';}) : null;
+  var renewalTime = renewRow ? renewRow[1] : '~6-8 weeks';
+  var jurisdictionNote = consulate ? 'Covers: ' + consulate.states.join(', ') : '';
+  var welcomeHtml;
+  if (ctx) {
+    var apptBlock = consulate ? '<a href="' + (consulate.appointmentUrl||'https://'+consulate.website) + '" target="_blank" class="appt-btn" style="margin-top:14px;display:inline-flex"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Book Appointment</a>' : '';
+    var hoursBlock = consulate ? buildHoursBlock(consulate.hours) : '';
+    welcomeHtml = 'Welcome! I am your <strong>ConsulAI</strong> assistant for <strong>' + nat.demonym + ' nationals in ' + res.name + '</strong>.' +
+      apptBlock +
+      '<div class="info-grid" style="margin-top:12px">' +
+        '<div class="info-cell"><div class="ic-label">Your Consulate</div><div class="ic-val">' + officeName + '</div></div>' +
+        '<div class="info-cell"><div class="ic-label">Phone</div><div class="ic-val">' + officePhone + '</div></div>' +
+        '<div class="info-cell"><div class="ic-label">Portal</div><div class="ic-val"><a href="' + officePortal + '" target="_blank" style="color:var(--blue)">' + officePortal.replace('https://','') + '</a></div></div>' +
+        '<div class="info-cell"><div class="ic-label">Renewal</div><div class="ic-val">' + renewalTime + '</div></div>' +
+        (jurisdictionNote ? '<div class="info-cell" style="grid-column:1/-1"><div class="ic-label">Jurisdiction</div><div class="ic-val" style="text-align:left">' + jurisdictionNote + '</div></div>' : '') +
+      '</div>' +
+      hoursBlock +
+      (ctx.ociNote ? '<div class="alert warn" style="margin-top:10px">\u26A0\uFE0F ' + ctx.ociNote + '</div>' : '') +
+      (consulate && consulate.note ? '<div class="alert info" style="margin-top:8px">\u2139\uFE0F ' + consulate.note + '</div>' : '');
+  } else {
+    welcomeHtml = 'Welcome! I am your <strong>ConsulAI</strong> assistant for <strong>' + nat.demonym + ' nationals in ' + res.name + '</strong>. Ask me anything about your consular services.';
+  }
+  var qr = ctx ? ['Renew my Indian passport','Apply for a 3rd country visa','OCI card process','Emergency \u2014 lost passport'] : ['Visa requirements','Passport renewal','Emergency support','Travel advisories'];
+  addAgent(welcomeHtml, qr);
+}
+
+// ── CHAT HELPERS ──
+function addAgent(html, qrs, suggestions) {
+  qrs = (qrs && qrs.length) ? qrs : [];
+  suggestions = (suggestions && suggestions.length) ? suggestions : [];
+  var c = document.getElementById('chatMsgs');
+  var d = document.createElement('div');
+  d.className = 'msg';
+  d.innerHTML = '<div class="av agent">\u2696\uFE0F</div><div><div class="bub agent">' + html + '</div></div>';
+  var inner = d.querySelector('div:last-child');
+  if (qrs.length) {
+    var row = document.createElement('div'); row.className = 'qr-row';
+    qrs.forEach(function(q){ var btn=document.createElement('div'); btn.className='qr'; btn.textContent=q; btn.onclick=function(){quickSend(q);}; row.appendChild(btn); });
+    inner.appendChild(row);
+  }
+  if (suggestions.length) {
+    var sr = document.createElement('div'); sr.className = 'sugg-row';
+    var lbl = document.createElement('div'); lbl.className = 'sugg-label'; lbl.textContent = 'Suggested follow-ups';
+    sr.appendChild(lbl);
+    suggestions.forEach(function(s){ var btn=document.createElement('div'); btn.className='sugg-btn'; btn.textContent=s; btn.onclick=function(){quickSend(s);}; sr.appendChild(btn); });
+    inner.appendChild(sr);
+  }
+  c.appendChild(d); scrollChat();
+}
+function addUser(text) {
+  var c = document.getElementById('chatMsgs');
+  var d = document.createElement('div'); d.className = 'msg user';
+  d.innerHTML = '<div class="av user">\uD83D\uDC64</div><div class="bub user">' + text + '</div>';
+  c.appendChild(d); scrollChat();
+}
+function addTyping() {
+  var c = document.getElementById('chatMsgs');
+  var d = document.createElement('div'); d.className = 'msg'; d.id = 'typingMsg';
+  d.innerHTML = '<div class="av agent">\u2696\uFE0F</div><div class="typing-bub"><span></span><span></span><span></span></div>';
+  c.appendChild(d); scrollChat();
+}
+function removeTyping() { var el = document.getElementById('typingMsg'); if (el) el.remove(); }
+function scrollChat() { var c = document.getElementById('chatMsgs'); c.scrollTop = c.scrollHeight; }
+function quickSend(text) { document.getElementById('chatIn').value = text; sendMsg(); }
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+
+// ── FOLLOW-UP BANK ──
+function updateFollowupBank() {
+  var bank = document.getElementById('followupBank');
+  if (!bank) return;
+  var topics = {
+    'Visa Services':               [{i:'🛂',q:'What visa types does the Indian Embassy Berlin issue?'},{i:'📋',q:'What documents are required for a visa application?'},{i:'⏱',q:'How long does visa processing take?'},{i:'💶',q:'What are the current visa fees?'},{i:'🌐',q:'Can I apply for a visa by post?'}],
+    'Travel Advisories':           [{i:'🌍',q:'Which countries can I visit visa-free on an Indian passport?'},{i:'⚠',q:'Are there any active travel warnings for Indian nationals?'},{i:'💉',q:'What vaccinations do I need for travel?'},{i:'🛂',q:'Do I need a transit visa through Germany?'}],
+    'Passport Renewal':            [{i:'🔄',q:'How do I renew my Indian passport in Germany?'},{i:'⚡',q:'What is the Tatkal (urgent) passport renewal process?'},{i:'📋',q:'What documents do I need for passport renewal?'},{i:'📅',q:'How do I book a passport appointment in Berlin?'},{i:'⏳',q:'How long does passport renewal take?'}],
+    'Lost or Damaged Passport':    [{i:'🚨',q:'My passport is lost in Germany — what are the steps?'},{i:'📋',q:'What documents do I need to report a lost passport?'},{i:'📄',q:'Can I get an Emergency Certificate instead?'},{i:'👮',q:'Do I need to file a police report first?'}],
+    'Passport Personal Details Change':[{i:'✎',q:'How do I update my name on my Indian passport?'},{i:'📋',q:'What documents are needed for a details change?'},{i:'⏱',q:'How long does a passport re-issue take?'},{i:'💶',q:'What are the fees for re-issue due to details change?'}],
+    'Newborn Passport & Birth Registration':[{i:'👶',q:'How do I register my newborn child born in Germany with the Indian Embassy?'},{i:'📋',q:'What documents are needed for a newborn passport?'},{i:'🇮🇳',q:'Does my child born in Germany have Indian citizenship?'},{i:'📄',q:'What is the NOC for naming of a newborn?'}],
+    'Emergency Certificate':       [{i:'📄',q:'What is an Emergency Certificate and when do I need it?'},{i:'📋',q:'What documents are needed for an Emergency Certificate?'},{i:'⏱',q:'How quickly can an Emergency Certificate be issued?'},{i:'🚫',q:'Can I fly back to India with only an Emergency Certificate?'}],
+    'Passport for Asylum / Duldung Holders':[{i:'📄',q:'Can Indian nationals with Duldung status apply for a passport?'},{i:'📋',q:'What documents are needed for re-issue under 104c visa?'},{i:'⚖️',q:'Will applying for an Indian passport affect my asylum case?'},{i:'🏢',q:'Which consulate handles my application?'}],
+    'OCI Fresh Application':       [{i:'🏷',q:'Who is eligible for an OCI card?'},{i:'📋',q:'What documents are required for a fresh OCI application?'},{i:'⏱',q:'How long does OCI processing take?'},{i:'💶',q:'What are the OCI application fees?'},{i:'👶',q:'How do I apply for OCI for my minor child?'}],
+    'OCI Spouse Application':      [{i:'💍',q:'My spouse is a German citizen — can they get OCI?'},{i:'📋',q:'What documents are needed for OCI spouse application?'},{i:'🌐',q:'Does OCI give my spouse the right to work in India?'},{i:'⏱',q:'How long does OCI spouse processing take?'}],
+    'OCI Renewal or Loss':         [{i:'🔄',q:'When do I need to renew my OCI card?'},{i:'📋',q:'What documents are needed to renew an OCI card?'},{i:'🚨',q:'My OCI card is lost — what do I do?'},{i:'💶',q:'What are the fees for OCI renewal or re-issue?'}],
+    'PIO to OCI Conversion':       [{i:'🔄',q:'How do I convert my PIO card to OCI?'},{i:'📋',q:'What documents are needed for PIO to OCI conversion?'},{i:'💶',q:'Is PIO to OCI conversion free of charge?'},{i:'⏱',q:'How long does the conversion take?'}],
+    'Citizenship & Naturalization':[{i:'🇩🇪',q:'Am I eligible for German citizenship as an Indian national?'},{i:'⚖️',q:'Can I hold dual Indian and German citizenship?'},{i:'📄',q:'What is a Surrender Certificate and when do I need it?'},{i:'🏢',q:'What happens to my OCI after I acquire German citizenship?'}],
+    'Surrender Certificate':       [{i:'📄',q:'What is a Surrender Certificate and who needs it?'},{i:'📋',q:'What documents are required for a Surrender Certificate?'},{i:'⏱',q:'How long does it take to get a Surrender Certificate?'},{i:'💶',q:'What are the fees for a Surrender Certificate?'}],
+    'Attestation Services':        [{i:'📎',q:'Which documents can the Indian Embassy attest?'},{i:'📋',q:'What is the process for document attestation?'},{i:'💶',q:'What are the attestation fees?'},{i:'⏱',q:'How long does attestation take?'},{i:'📮',q:'Can I submit documents for attestation by post?'}],
+    'Police Clearance Certificate':[{i:'📄',q:'How do I apply for a PCC from the Indian Embassy in Germany?'},{i:'📋',q:'What documents are needed for a PCC application?'},{i:'⏱',q:'How long does PCC processing take?'},{i:'💶',q:'What are the PCC fees?'},{i:'📮',q:'Can I apply for a PCC by post?'}],
+    'Birth Certificate':           [{i:'👶',q:'How do I obtain an Indian birth certificate from Germany?'},{i:'📋',q:'What documents are needed to apply for a birth certificate?'},{i:'🇮🇳',q:'Is a birth certificate needed for passport or OCI?'},{i:'💶',q:'What are the fees for a birth certificate?'}],
+    'Name Change Certificate':     [{i:'✎',q:'How do I get an official name change certificate from the embassy?'},{i:'📋',q:'What documents are required for a name change certificate?'},{i:'⏱',q:'How long does it take?'},{i:'💶',q:'What are the fees?'}],
+    'NOC for Newborn Naming':       [{i:'👶',q:'What is a NOC for naming of a newborn child?'},{i:'📋',q:'What documents are needed for the NOC?'},{i:'🇮🇳',q:'Is this required for Indian passport or birth registration?'},{i:'🏢',q:'Where do I submit the NOC application?'}],
+    'Non-Nationality Certificate':  [{i:'📄',q:'What is a Non-Nationality Certificate and who needs it?'},{i:'📋',q:'What documents are required?'},{i:'⏱',q:'How long does it take?'},{i:'🏢',q:'Which consulate issues this certificate?'}],
+    'NRI Certificate':             [{i:'📄',q:'What is an NRI Certificate and when do I need it?'},{i:'📋',q:'What documents are needed for an NRI Certificate?'},{i:'🏦',q:'Can I use an NRI Certificate for banking or property in India?'},{i:'⏱',q:'How long does processing take?'}],
+    'Death Certificate & Repatriation':[{i:'🪳',q:'What steps are involved in repatriating mortal remains to India?'},{i:'📋',q:'What documents are needed for death certificate from the embassy?'},{i:'🏥',q:'How does the eCARe portal help with repatriation?'},{i:'💶',q:'Who covers the cost of repatriation?'}],
+    'International Driving Permit':[{i:'🙣',q:'How do I apply for an International Driving Permit (IDP)?'},{i:'📋',q:'What documents are needed for an IDP?'},{i:'🇮🇳',q:'Is an IDP valid for driving in India?'},{i:'💶',q:'What are the IDP fees?'},{i:'⏱',q:'How long is an IDP valid?'}],
+    'eCARe Portal':                [{i:'💻',q:'What is the eCARe portal and how does it work?'},{i:'🪳',q:'How do I register a death case on eCARe?'},{i:'📋',q:'What documents are needed for eCARe registration?'},{i:'🌐',q:'What is the website for the eCARe portal?'}],
+    'Postal Applications':         [{i:'📮',q:'Which services can be applied for by post?'},{i:'📋',q:'How do I send documents by post to the Indian Embassy?'},{i:'📦',q:'Should I use registered or express post?'},{i:'📞',q:'How do I track my postal application?'}],
+    'Register as Indian National':  [{i:'📋',q:'How do I register as an Indian national living in Germany?'},{i:'🌐',q:'What is the online registration portal for NRIs in Germany?'},{i:'❓',q:'Is registration mandatory for Indian nationals in Germany?'},{i:'📲',q:'Can I register online or must I visit the consulate?'}],
+    'Indian Student Registration':  [{i:'🎓',q:'How do Indian students register with the Indian Embassy in Germany?'},{i:'🌐',q:'What is the Indian Students Germany registration portal?'},{i:'❓',q:'Is student registration mandatory?'},{i:'🛡',q:'What benefits does student registration provide?'}],
+    'Overseas Voter Registration':  [{i:'🗳',q:'How do I register as an overseas voter from Germany?'},{i:'📋',q:'What documents are needed for overseas voter registration?'},{i:'🇮🇳',q:'Can I vote in Indian elections from Germany?'},{i:'🌐',q:'Where do I register as an overseas voter online?'}],
+    'MADAD Portal':                [{i:'💻',q:'What is the MADAD portal and how can it help me?'},{i:'🚨',q:'How do I file a consular complaint on MADAD?'},{i:'📞',q:'What types of issues can MADAD resolve?'},{i:'🌐',q:'What is the website for the MADAD portal?'}],
+    'Indian Community Welfare Fund':[{i:'💵',q:'Who is eligible for the Indian Community Welfare Fund?'},{i:'🚨',q:'What emergencies does the Welfare Fund cover?'},{i:'📋',q:'How do I apply for Welfare Fund assistance?'},{i:'🏢',q:'How do I contact the welfare officer at the embassy?'}],
+    'Weekly Open House':            [{i:'🗓',q:'When is the Weekly Open House held at the Indian Embassy Berlin?'},{i:'📋',q:'What types of queries can be raised at the Open House?'},{i:'📍',q:'Do I need an appointment for the Open House?'},{i:'🏢',q:'Where is the embassy located for the Open House?'}],
+    'Fraud Advisory':              [{i:'⚠',q:'What are common scams targeting Indians in Germany?'},{i:'📱',q:'How can I verify if I am speaking to a real embassy official?'},{i:'👮',q:'How do I report a fraud involving someone impersonating the Indian Embassy?'},{i:'🛡',q:'How do I protect myself from job or visa scams?'}]
+  };
+  var items = topics[currentService] || [];
+  while (bank.children.length > 1) bank.removeChild(bank.lastChild);
+  items.forEach(function(item){
+    var btn = document.createElement('button');
+    btn.className = 'followup-btn';
+    btn.innerHTML = '<span>' + item.i + '</span>' + item.q;
+    btn.onclick = function(){ quickSend(item.q); };
+    bank.appendChild(btn);
+  });
+  bank.style.display = items.length ? 'flex' : 'none';
+}
+
+// ── AI CHAT ──
+async function sendMsg() {
+  var inp = document.getElementById('chatIn');
+  var text = inp.value.trim();
+  if (!text || isTyping) return;
+  inp.value = ''; inp.style.height = 'auto';
+  addUser(text);
+  isTyping = true;
+  addTyping();
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  var ctx = getCtxData();
+  var consulate = (userNationality==='IN' && userResidence==='DE' && selectedGermanState) ? getConsulateForState(selectedGermanState) : null;
+  var visaToRes = getVisaStatus(userNationality, userResidence);
+  var visaToHome = getVisaStatus(userResidence, userNationality);
+  var systemPrompt = 'You are ConsulAI, an expert consular services assistant.\n\n' +
+    'USER CONTEXT:\n' +
+    '- Nationality: ' + nat.demonym + ' (' + nat.name + ' passport)\n' +
+    '- Country of Residence: ' + res.name + '\n' +
+    '- Service: ' + currentService + '\n' +
+    '- Visa (' + nat.name + ' passport to ' + res.name + '): ' + visaToRes + '\n' +
+    '- Visa (' + res.name + ' to ' + nat.name + '): ' + visaToHome + '\n' +
+    (consulate ? '- Your Consulate: ' + consulate.name + '\n' : '') +
+    (ctx ? '- Passport renewal: ' + ctx.passportRenew + '\n- Emergency doc: ' + ctx.emergencyDoc + '\n' : '') + '\n' +
+    'RESPONSE FORMAT:\n' +
+    '- Never write plain paragraphs. Always use structured HTML.\n' +
+    '- For any process: numbered steps using <div class="steps"><div class="step"><span class="step-num">1</span><div class="step-body"><strong>Title</strong><br>detail</div></div></div>\n' +
+    '- Use info-grid cards for facts, alert banners for warnings, ul.ck-list for document lists.\n' +
+    '- Keep each step concise. Max 5 steps per response.\n' +
+    '- Use <strong> for all key terms.\n' +
+    '- Always answer as a ' + nat.demonym + ' national LIVING IN ' + res.name + '. Never give generic home-country advice.\n' +
+    '- End with this exact line: SUGGESTIONS:["s1","s2","s3"]';
+  try {
+    var resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system: systemPrompt, max_tokens: 1000, messages: [{ role: 'user', content: text }] })
+    });
+    var data = await resp.json();
+    removeTyping();
+    var full = data.content ? data.content.map(function(b){ return b.text || ''; }).join('') : 'Sorry, I could not generate a response.';
+    var suggMatch = full.match(/SUGGESTIONS[\s:*]*\[([^\]]+)\]/i);
+    var suggs = [];
+    if (suggMatch) { try { suggs = JSON.parse('[' + suggMatch[1] + ']'); } catch(e) {} }
+    var clean = full.replace(/[-*\s]*SUGGESTIONS[\s*:]*\[[\s\S]*?\]/gi, '').replace(/\n[-]{2,}\s*$/gm, '').trim();
+    var lower = text.toLowerCase();
+    var wantsForm = lower.includes('apply') || lower.includes('start application') || lower.includes('fill') || lower.includes('begin');
+    addAgent(clean, [], suggs);
+    if (wantsForm) setTimeout(function(){ showContextForm(); }, 500);
+  } catch(e) {
+    removeTyping();
+    addAgent('<div class="alert emer">\u26A1 Connection error. Please check your network and try again.</div>', [], ['Retry','Contact consulate directly']);
+  }
+  isTyping = false;
+}
+
+// ── APPLICATION FORM ──
+function showContextForm() {
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  var ctx = getCtxData();
+  var consulate = (userNationality==='IN' && userResidence==='DE' && selectedGermanState) ? getConsulateForState(selectedGermanState) : null;
+  var c = document.getElementById('chatMsgs');
+  var d = document.createElement('div'); d.className = 'msg';
+  var fid = 'f' + Date.now();
+  var visaOptions = {
+    'Visa Applications': ['Tourist/Visitor Visa','Student Visa','Work Visa','Transit Visa','Family Reunification'],
+    'Passport Services': ['Renewal \u2014 Normal','Renewal \u2014 Tatkal (Urgent)','Lost Passport','Damaged Passport','Minor Passport'],
+    'Citizenship & Naturalization': ['OCI Card Application','Naturalization Inquiry','Renunciation of Citizenship'],
+    'Emergency Support': ['Lost/Stolen Passport','Emergency Travel Certificate','Detained Abroad','Medical Emergency'],
+    'Travel Advisories': ['General Travel Query','Visa-Free Travel','Health Advisory','Travel Insurance']
+  };
+  var opts = (visaOptions[currentService]||visaOptions['Visa Applications']).map(function(o){ return '<option>'+o+'</option>'; }).join('');
+  var submitTo = consulate ? consulate.name : (ctx ? ctx.processingOffice : nat.name + ' consulate');
+  d.innerHTML = '<div class="av agent">\u2696\uFE0F</div><div>' +
+    '<div class="bub agent">Please complete this form for your <strong>' + currentService + '</strong> request:</div>' +
+    '<div class="form-card">' +
+      '<div class="fc-title">&#128203; ' + currentService + ' \u2014 ' + nat.demonym + ' in ' + res.name + '</div>' +
+      '<div class="form-row">' +
+        '<div class="fg"><div class="fl">First Name</div><input class="fi" id="'+fid+'_fn" placeholder="First name"></div>' +
+        '<div class="fg"><div class="fl">Last Name</div><input class="fi" id="'+fid+'_ln" placeholder="Last name"></div>' +
+      '</div>' +
+      '<div class="form-row">' +
+        '<div class="fg"><div class="fl">Passport No.</div><input class="fi" id="'+fid+'_pp" placeholder="e.g. A1234567"></div>' +
+        '<div class="fg"><div class="fl">Passport Expiry</div><input class="fi" type="date" id="'+fid+'_exp"></div>' +
+      '</div>' +
+      '<div class="form-row"><div class="fg full"><div class="fl">Service Type</div><select class="fs" id="'+fid+'_svc">'+opts+'</select></div></div>' +
+      '<div class="form-row"><div class="fg full"><div class="fl">Address in '+res.name+'</div><input class="fi" id="'+fid+'_addr" placeholder="Street, City, Postcode"></div></div>' +
+      '<div class="form-row">' +
+        '<div class="fg"><div class="fl">Phone</div><input class="fi" id="'+fid+'_ph" placeholder="+49..."></div>' +
+        '<div class="fg"><div class="fl">Email</div><input class="fi" type="email" id="'+fid+'_em" placeholder="your@email.com"></div>' +
+      '</div>' +
+      '<div class="alert info" style="margin-top:4px">\u2139\uFE0F Submit to: <strong>' + submitTo + '</strong></div>' +
+      '<div class="fa">' +
+        '<button class="btn-p" onclick="submitForm(\''+fid+'\',\''+currentService.replace(/\'/g,"\\'")+'\'">Submit Application &rarr;</button>' +
+        '<button class="btn-s" onclick="this.closest(\'.msg\').remove()">Cancel</button>' +
+      '</div>' +
+    '</div></div>';
+  c.appendChild(d); scrollChat();
+}
+
+// ── APPLICATION TRACKER ──
+function saveApplication(app) {
+  var apps = getApplications(); apps.unshift(app);
+  try { localStorage.setItem('cns_apps', JSON.stringify(apps)); } catch(e) {}
+  renderTrackerSidebar();
+}
+function getApplications() {
+  try { return JSON.parse(localStorage.getItem('cns_apps') || '[]'); } catch(e) { return []; }
+}
+function renderTrackerSidebar() {
+  var apps = getApplications();
+  var sec = document.getElementById('trackerSection');
+  var panel = document.getElementById('trackerPanel');
+  var badge = document.getElementById('trackerBadge');
+  if (!sec || !panel) return;
+  if (!apps.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  if (badge) badge.textContent = apps.length;
+  var SL = { submitted:'Submitted', processing:'In Progress', ready:'Ready to Collect', collected:'Collected' };
+  panel.innerHTML = apps.map(function(a){
+    var dt = new Date(a.submittedAt).toLocaleDateString('en-DE',{day:'2-digit',month:'short',year:'numeric'});
+    return '<div class="tracker-item" onclick="openTrackerModal(\''+a.ref+'\')">'+
+      '<div class="tracker-ref">#'+a.ref+'</div>'+
+      '<div class="tracker-meta">'+a.service+' &middot; '+dt+'</div>'+
+      '<div class="tracker-meta" style="margin-top:2px">'+a.consulate.split(',').pop().trim()+'</div>'+
+      '<div class="tracker-status '+a.status+'">'+(SL[a.status]||a.status)+'</div>'+
+      '</div>';
+  }).join('');
+}
+function openTrackerModal(ref) {
+  var apps = getApplications();
+  var app = apps.find(function(a){ return a.ref === ref; });
+  if (!app) return;
+  document.getElementById('trackModalTitle').textContent = app.service;
+  document.getElementById('trackModalRef').textContent = '#' + app.ref + ' \u00b7 ' + app.consulate;
+  var STAGES = [
+    { key:'submitted',  label:'Application Submitted',  desc:'Your application has been received and logged.' },
+    { key:'processing', label:'Under Processing',        desc:'Consulate staff are verifying your documents.' },
+    { key:'ready',      label:'Ready for Collection',    desc:'Your document is ready. Visit the consulate to collect.' },
+    { key:'collected',  label:'Collected',               desc:'Process complete. Document has been collected.' }
+  ];
+  var curIdx = STAGES.findIndex(function(s){ return s.key === app.status; });
+  var sub = new Date(app.submittedAt);
+  var tlHtml = '<div class="timeline">' + STAGES.map(function(stage, i){
+    var state = i < curIdx ? 'done' : i === curIdx ? 'active' : 'pending';
+    var est = new Date(sub.getTime() + i * 14 * 24 * 3600 * 1000);
+    var dateStr = est.toLocaleDateString('en-DE',{day:'2-digit',month:'short'});
+    return '<div class="tl-step">'+
+      '<div class="tl-dot '+state+'">'+(state==='done'?'&#10003;':i+1)+'</div>'+
+      '<div class="tl-body">'+
+        '<div class="tl-title'+(state==='pending'?' pending':'')+'">'+stage.label+'</div>'+
+        '<div class="tl-desc">'+stage.desc+'</div>'+
+        '<div class="tl-date">'+(i<=curIdx?'':'Est. ')+dateStr+'</div>'+
+      '</div></div>';
+  }).join('') + '</div>';
+  var infoGrid = '<div class="info-grid" style="margin-top:4px">'+
+    '<div class="info-cell"><div class="ic-label">Service</div><div class="ic-val">'+app.service+'</div></div>'+
+    '<div class="info-cell"><div class="ic-label">State</div><div class="ic-val">'+app.state+'</div></div>'+
+    '<div class="info-cell"><div class="ic-label">Submitted</div><div class="ic-val">'+new Date(app.submittedAt).toLocaleDateString('en-DE',{day:'2-digit',month:'short',year:'numeric'})+'</div></div>'+
+    '<div class="info-cell"><div class="ic-label">Est. Timeline</div><div class="ic-val">'+app.estimatedWeeks+'</div></div>'+
+    '</div>';
+  var nextStage = STAGES[curIdx + 1];
+  var updateBtn = nextStage
+    ? '<button onclick="updateAppStatus(\''+ref+'\',\''+nextStage.key+'\')" style="width:100%;padding:9px;background:rgba(232,147,58,.1);border:1px solid rgba(232,147,58,.3);color:var(--saffron-light);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;margin-top:10px;font-family:Outfit,sans-serif">Mark as: '+nextStage.label+' &rarr;</button>'
+    : '<div class="alert ok" style="margin-top:10px">&#10003; Application complete</div>';
+  document.getElementById('trackModalBody').innerHTML = infoGrid + tlHtml + updateBtn;
+  document.getElementById('trackerModal').classList.remove('hidden');
+}
+function updateAppStatus(ref, status) {
+  var apps = getApplications();
+  apps = apps.map(function(a){ if(a.ref===ref){ a.status=status; a.statusUpdatedAt=new Date().toISOString(); } return a; });
+  try { localStorage.setItem('cns_apps', JSON.stringify(apps)); } catch(e) {}
+  renderTrackerSidebar(); openTrackerModal(ref);
+}
+function closeTracker() { document.getElementById('trackerModal').classList.add('hidden'); }
+
+// ── SUBMIT FORM ──
+function submitForm(fid, svc) {
+  var ref = 'CNS-' + Math.floor(Math.random() * 900000 + 100000);
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  var ctx = getCtxData();
+  var consulate = (userNationality==='IN' && userResidence==='DE' && selectedGermanState) ? getConsulateForState(selectedGermanState) : null;
+  var office = consulate ? consulate.name : (ctx ? ctx.processingOffice : nat.name + ' consulate in ' + res.name);
+  var renewRow = ctx ? ctx.infoRows.find(function(r){ return r[0].includes('Passport'); }) : null;
+  var timeline = renewRow ? renewRow[1] : '6-8 weeks';
+  saveApplication({ ref:ref, service:svc, consulate:office, state:selectedGermanState||res.name,
+    submittedAt:new Date().toISOString(), estimatedWeeks:timeline, status:'submitted', statusUpdatedAt:new Date().toISOString() });
+  addTyping();
+  setTimeout(function(){
+    removeTyping();
+    var h = '<span style="color:var(--green)">&#10003;</span> <strong>' + svc + '</strong> submitted successfully.' +
+      '<ul class="ck-list">' +
+        '<li>Reference: <strong style="font-family:JetBrainsMono,monospace;color:var(--saffron)">#' + ref + '</strong></li>' +
+        '<li>Processing at: <strong>' + office + '</strong></li>' +
+        '<li>Estimated: <strong>' + timeline + '</strong></li>' +
+        '<li class="warn">Bring originals + photocopies to appointment</li>' +
+      '</ul>' +
+      '<div class="alert ok" style="margin-top:10px">Application saved. Track it anytime from the sidebar.</div>' +
+      '<button onclick="openTrackerModal(\'' + ref + '\')" style="margin-top:10px;display:inline-flex;align-items:center;gap:7px;padding:9px 16px;background:linear-gradient(135deg,var(--saffron),var(--saffron-light));color:var(--ink);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:Outfit,sans-serif">&#128203; Track Application #' + ref + '</button>';
+    addAgent(h, [], ['Check application status','What documents to bring','How to collect my passport']);
+  }, 1500);
+}
+
+// ── EMERGENCY ──
+function openSOS() { document.getElementById('sosModal').classList.remove('hidden'); backToTriage(); }
+function closeSOS() { document.getElementById('sosModal').classList.add('hidden'); }
+function backToTriage() {
+  document.getElementById('emergencyTriage').style.display = 'block';
+  document.getElementById('emerDetail').style.display = 'none';
+  document.querySelectorAll('.emer-cat').forEach(function(c){ c.classList.remove('active'); });
+}
+function selectEmerCategory(key) {
+  document.querySelectorAll('.emer-cat').forEach(function(c){ c.classList.remove('active'); });
+  var keyMap = ['death','accident','mental','financial','passport','arrested'];
+  var cats = document.querySelectorAll('.emer-cat');
+  var idx = keyMap.indexOf(key);
+  if (idx >= 0) cats[idx].classList.add('active');
+  var data = EMER_DATA[key];
+  if (!data) return;
+  document.getElementById('emergencyTriage').style.display = 'none';
+  var stepsHtml = data.steps.map(function(s, i){
+    return '<div class="emer-step"><div class="emer-step-num">'+(i+1)+'</div><div class="emer-step-body"><strong>'+s.t+'</strong><br>'+s.b+'</div></div>';
+  }).join('');
+  var hotlinesHtml = data.hotlines.map(function(h){
+    return '<div class="emer-hotline"><div><div class="emer-hotline-name">'+h.n+'</div><div class="emer-hotline-num">'+h.num+'</div></div><div style="display:flex;align-items:center;gap:6px"><span style="font-size:10px;color:var(--ash-muted)">'+h.note+'</span><button class="emer-call-btn">Call</button></div></div>';
+  }).join('');
+  var consulateHtml = '';
+  if (selectedGermanState) {
+    var c = getConsulateForState(selectedGermanState);
+    if (c) {
+      consulateHtml = '<div class="emer-hotline" style="border-color:rgba(232,147,58,.3)"><div><div class="emer-hotline-name" style="color:var(--saffron-light)">Your Consulate \u2014 ' + c.name.split(',').pop().trim() + '</div><div class="emer-hotline-num">'+c.emergency+'</div></div><button class="emer-call-btn" style="border-color:rgba(232,147,58,.4);color:var(--saffron)">Call</button></div>';
+    }
+  }
+  document.getElementById('emerDetailContent').innerHTML =
+    '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">'+data.title+'</div>' +
+    '<div class="emer-steps">'+stepsHtml+'</div>' +
+    '<div style="margin-top:14px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--saffron);margin-bottom:8px">Emergency Contacts</div>' +
+    consulateHtml + hotlinesHtml;
+  document.getElementById('emerDetail').style.display = 'block';
+}
+document.addEventListener('DOMContentLoaded', function() {
+  var sm = document.getElementById('sosModal');
+  if (sm) sm.addEventListener('click', function(e){ if(e.target.id==='sosModal') closeSOS(); });
+  var tm = document.getElementById('trackerModal');
+  if (tm) tm.addEventListener('click', function(e){ if(e.target.id==='trackerModal') closeTracker(); });
+  var sm2 = document.getElementById('sosModal2');
+  if (sm2) sm2.addEventListener('click', function(e){ if(e.target.id==='sosModal2') closeSOSModal(); });
+  renderTrackerSidebar();
+});
+
+
+// ── SOS CRITICAL ──
+var SOS_DATA = {
+  evacuation:{ title:'Country Evacuation', alert:'Do NOT share your location publicly during active conflict.',
+    steps:[{t:'Register with Indian Embassy',b:'Use <strong>MADAD portal (madad.gov.in)</strong> to be added to evacuation lists.'},{t:'Follow official advisories',b:'Monitor <strong>MEA India (@MEAIndia on X)</strong> and local embassy for routes and assembly points.'},{t:'Carry essentials only',b:'Passport, residence permit, cash, medicines, phone charger.'},{t:'Proceed to assembly points',b:'Do NOT travel independently unless specifically instructed by the embassy.'},{t:'Special evacuation flights',b:'GOI may operate <strong>Vande Bharat-style flights</strong>. Register and await embassy communications.'}],
+    contacts:[{name:'MEA Emergency Cell (24/7)',num:'+91-11-2301-2113',isPhone:true},{name:'MADAD Portal',num:'madad.gov.in',isPhone:false}]},
+  disaster:{ title:'Natural Disaster', alert:'Carry a physical copy of your passport and emergency contacts.',
+    steps:[{t:'Move to safe zone immediately',b:'Follow local emergency instructions. Germany: 112 for ambulance/fire, 110 for police.'},{t:'Mark yourself safe',b:'Use <strong>Facebook Safety Check</strong> or SMS family. Notify Indian Embassy via MADAD.'},{t:'Register with Indian Embassy',b:'Log in to <strong>madad.gov.in</strong> to confirm you are safe or request assistance.'},{t:'Follow local relief authorities',b:'Germany: <strong>THW</strong> (Technical Relief) and <strong>DRK</strong> (Red Cross) coordinate disaster relief.'},{t:'Request consular help if stranded',b:'If unreachable by normal means, call <strong>MEA Emergency Cell</strong> for special operations.'}],
+    contacts:[{name:'Germany Emergency',num:'112',isPhone:true},{name:'German Red Cross (DRK)',num:'0800 365 000',isPhone:true},{name:'MEA Emergency Cell',num:'+91-11-2301-2113',isPhone:true}]},
+  attack:{ title:'Terror Attack / Active Threat', alert:'RUN • HIDE • TELL. Do not confront. Survive first.',
+    steps:[{t:'RUN — HIDE — TELL',b:'<strong>Run</strong> if you can escape. <strong>Hide</strong> if not. <strong>Tell</strong> authorities via 112 only when safe.'},{t:'Keep phone on silent',b:'Sound reveals location during an active threat. Stay silent and still.'},{t:'When safe, contact Indian Embassy',b:'Call your Indian consulate to report your status and receive guidance.'},{t:'Do not post on social media',b:'Posting real-time locations can compromise law enforcement operations.'},{t:'Cooperate with security forces',b:'Follow all police instructions. Keep hands visible. Identify yourself as Indian.'}],
+    contacts:[{name:'Germany Emergency',num:'112',isPhone:true},{name:'German Police',num:'110',isPhone:true},{name:'MEA Emergency Cell',num:'+91-11-2301-2113',isPhone:true}]},
+  hostage:     { title: 'Hostage / Kidnapping',
+    steps:[{t:'If safe, call emergency services',b:'Call <strong>112</strong> (Germany). Stay calm, do not provoke captors.'},{t:'Family must contact MEA immediately',b:'Toll-free India: <strong>1800-11-8797</strong> or +91-11-2301-2113.'},{t:'Do not pay ransom without guidance',b:'MEA has <strong>crisis protocols</strong> and works with local law enforcement.'},{t:'Embassy coordinates with police',b:'Indian Embassy liaises with <strong>local police, Interpol, and intelligence agencies</strong>.'},{t:'Preserve all communications',b:'Save all messages from captors and hand to authorities. Do not delete anything.'}],
+    hotlines:[{name:'German Police',num:'110'},{name:'MEA Toll-Free India',num:'1800-11-8797'},{name:'MEA Emergency Cell',num:'+91-11-2301-2113'}]},
+  missing:     { title: 'Missing Indian National',
+    steps:[{t:'File missing persons report immediately',b:'Contact <strong>German police (110)</strong> within 24 hours. Early reporting is critical.'},{t:'Notify the Indian Embassy',b:'Consulate liaises with <strong>Bundeskriminalamt</strong> and issues official appeals.'},{t:'Register on MADAD portal',b:'Log the case on <strong>madad.gov.in</strong> with photo, last known location, and contact info.'},{t:'Alert Indian community networks',b:'Indian associations in Germany can amplify the search.'},{t:'Request Interpol notice',b:'Embassy can coordinate an <strong>Interpol Yellow Notice</strong> if borders may have been crossed.'}],
+    hotlines:[{name:'German Police',num:'110'},{name:'MADAD Portal',num:'madad.gov.in'},{name:'MEA Emergency Cell',num:'+91-11-2301-2113'}]},
+  medical_critical: { title: 'Critical Medical Emergency',
+    steps:[{t:'Call 112 immediately',b:'State your location clearly and stay on the line with the dispatcher.'},{t:'Do not move if spinal injury suspected',b:'Apply pressure to severe bleeding. Begin <strong>CPR if trained</strong> and person is unresponsive.'},{t:'Notify Indian consulate',b:'Embassy contacts family in India and provides Hindi-speaking doctors and translators.'},{t:'Emergency treatment cannot be refused',b:'German hospitals must provide <strong>emergency treatment regardless of insurance status</strong>.'},{t:'Consular medical liaison',b:'If life-support decisions needed with family abroad, consulate can act as <strong>liaison</strong>.'}],
+    hotlines:[{name:'Germany Ambulance',num:'112'},{name:'ADAC Medical',num:'+49-89-76 76 76'},{name:'Indian Consulate Emergency',num:'see Key Info'}]}
+};
+
+function openSOSModal() {
+  var nat = COUNTRIES[userNationality];
+  var res = COUNTRIES[userResidence];
+  document.getElementById('sosModal2Sub').textContent = 'Critical situations for ' + nat.demonym + ' nationals in ' + res.name;
+  var consulate = (userNationality === 'IN' && userResidence === 'DE' && selectedGermanState) ? getConsulateForState(selectedGermanState) : null;
+  var emerNum = consulate ? consulate.emergency : '+91-11-2419-8000';
+  SOS_DATA.medical_critical.contacts[2].num = emerNum;
+  var cb = document.getElementById('sosConsulateBlock');
+  cb.innerHTML = '<div class="alert emer" style="font-size:12px">' +
+    (consulate ? '<strong>' + consulate.name + '</strong>: ' + emerNum : '<strong>MEA 24/7:</strong> +91-11-2301-2113 &nbsp;|&nbsp; India toll-free: 1800-11-8797') +
+    '</div>';
+  backToSOSGrid();
+  document.getElementById('sosModal2').classList.remove('hidden');
+}
+function closeSOSModal() { document.getElementById('sosModal2').classList.add('hidden'); }
+function backToSOSGrid() {
+  document.getElementById('sosScenarioGrid').style.display = 'block';
+  document.getElementById('sosDetailPanel').style.display = 'none';
+  document.querySelectorAll('.sos-scenario').forEach(function(s){ s.classList.remove('active'); });
+}
+function selectSOSScenario(key) {
+  var keys = ['evacuation','hostage','disaster','missing','attack','medical_critical'];
+  document.querySelectorAll('.sos-scenario').forEach(function(s,i){ s.classList[keys[i]===key?'add':'remove']('active'); });
+  var data = SOS_DATA[key]; if (!data) return;
+  var steps = data.steps.map(function(s,i){ return '<div class="sos-detail-step"><div class="sos-step-num">'+(i+1)+'</div><div class="sos-step-body"><strong>'+s.t+'</strong><br>'+s.b+'</div></div>'; }).join('');
+  var contacts = data.contacts.map(function(c){
+    var btn = c.isPhone ? '<button class="sos-call">Call</button>' : '<a href="https://'+c.num+'" target="_blank" class="sos-call" style="text-decoration:none">Open</a>';
+    return '<div class="sos-contact"><div><div class="sos-contact-name">'+c.name+'</div><div class="sos-contact-num">'+c.num+'</div></div>'+btn+'</div>';
+  }).join('');
+  document.getElementById('sosDetailContent').innerHTML =
+    '<div style="font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px">'+data.title+'</div>'+
+    '<div class="alert emer" style="margin-bottom:12px;font-size:12px">🚨 '+data.alert+'</div>'+
+    steps +
+    '<div style="margin-top:14px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--saffron);margin-bottom:8px">Emergency Contacts</div>'+
+    contacts;
+  document.getElementById('sosScenarioGrid').style.display = 'none';
+  document.getElementById('sosDetailPanel').style.display = 'block';
+}
+// sosModal2 listener handled in DOMContentLoaded above
+
+function switchSbTab(name) {
+  document.querySelectorAll('.sb-tab').forEach(function(t, i) {
+    t.classList.toggle('active', ['consular','certificates','community'][i] === name);
+  });
+  document.querySelectorAll('.sb-panel').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'sbTab-' + name);
+  });
+}
+</script>
+<!-- SOS Critical Modal -->
+<div class="modal-ov hidden" id="sosModal2">
+  <div class="modal" style="max-width:520px;max-height:90vh;overflow-y:auto;border-color:rgba(224,82,82,0.5)">
+    <div class="modal-h">
+      <div class="modal-ico" style="background:rgba(224,82,82,0.2);border-color:rgba(224,82,82,0.5);font-size:22px">&#9888;</div>
+      <div>
+        <div class="modal-title" style="color:var(--red)">SOS — Critical Assistance</div>
+        <div class="modal-sub" id="sosModal2Sub">Select your situation</div>
+      </div>
+    </div>
+    <div id="sosScenarioGrid">
+      <div class="sos-modal-grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="sos-scenario" onclick="selectSOSScenario('evacuation')"><div class="sos-scenario-ico">&#9992;&#65039;</div><div class="sos-scenario-label">Country Evacuation</div><div class="sos-scenario-sub">War, civil unrest</div></div>
+        <div class="sos-scenario" onclick="selectSOSScenario('disaster')"><div class="sos-scenario-ico">&#127754;</div><div class="sos-scenario-label">Natural Disaster</div><div class="sos-scenario-sub">Earthquake, flood, tsunami</div></div>
+        <div class="sos-scenario" onclick="selectSOSScenario('attack')"><div class="sos-scenario-ico">&#128680;</div><div class="sos-scenario-label">Terror / Attack</div><div class="sos-scenario-sub">Active threat, mass casualty</div></div>
+      </div>
+      <div id="sosConsulateBlock" style="margin-top:4px"></div>
+    </div>
+    <div id="sosDetailPanel" style="display:none">
+      <button onclick="backToSOSGrid()" style="background:none;border:none;color:var(--ash-muted);font-size:12px;cursor:pointer;margin-bottom:14px;display:flex;align-items:center;gap:5px">&#8592; Back</button>
+      <div id="sosDetailContent"></div>
+    </div>
+    <button class="modal-close" style="margin-top:14px" onclick="closeSOSModal()">Close</button>
+  </div>
+</div>
+</body>
+</html>
