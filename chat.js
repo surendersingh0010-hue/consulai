@@ -1,16 +1,18 @@
 export default async function handler(req, res) {
-  // Only allow POST
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    return res.status(200).end();
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Basic rate limiting header check (optional extra protection)
-  const origin = req.headers.origin || '';
-  
   try {
     const { system, messages, max_tokens } = req.body;
 
-    // Validate required fields
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid request body' });
     }
@@ -33,18 +35,15 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('Anthropic error:', data);
       return res.status(response.status).json({ error: data.error?.message || 'API error' });
     }
 
-    // CORS headers so your frontend can call this
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
     return res.status(200).json(data);
 
   } catch (err) {
-    console.error('Proxy error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Proxy error:', err.message);
+    return res.status(500).json({ error: 'Internal server error: ' + err.message });
   }
 }
